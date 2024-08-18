@@ -45,6 +45,7 @@ class fake0MPC3008:
 
 def test_fake0MPC3008():
 
+    print("Testing fake0 (data driven) ADC")
     a = fake0MPC3008()
     assert(a.voltage() == MAX_VOLTAGE)
     assert(a.voltage() == MAX_VOLTAGE)
@@ -54,6 +55,7 @@ def test_fake0MPC3008():
     for t in test_data:
         assert(b.voltage() == t)
 
+    print("End Testing fake0")
 
 class fake1MPC3008():
     """
@@ -67,10 +69,11 @@ class fake1MPC3008():
         self.step = step
         self.reading = Vmax
         self.charge_direction = -1
-        self.seqnum = 1
+        self.seqnum = 0   # count calls, label output groups
 
 
     def voltage(self):
+        self.seqnum+=1
         current_reading = self.reading
 
         if current_reading <= self.vmin:
@@ -88,13 +91,13 @@ class fake1MPC3008():
             self.reading=MAX_VOLTAGE
 
         print(self.seqnum, ": Reading:", current_reading)
-        self.seqnum+=1
         return current_reading
     
 
 
 def test_fake1MPC3008():
 
+    print("Testing fake1 (generated ADC)")
     # create with no args (use defaults)
     a = fake1MPC3008()
     r = MAX_VOLTAGE
@@ -116,7 +119,7 @@ def test_fake1MPC3008():
         assert(r == a.voltage())
         r+=DEFAULT_STEP
 
-
+    print("End Testing fake1")
 
 
 
