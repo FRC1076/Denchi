@@ -11,11 +11,11 @@ Development Plan
 
 $ python batconcap.py --id '2025A' --team 1076 --loadohms 6.1 --outfile history.dat
 $ cat history.dat
-# batconcap Battery Conditioner and Capacity Test
-# TeamID: 1076
-# BatteryID: 2025A
-# LoadOhms: 6.1
-# StartTime: Sat Sep 28 12:00:12 EDT 2024
+\# batconcap Battery Conditioner and Capacity Test
+\# TeamID: 1076
+\# BatteryID: 2025A
+\# LoadOhms: 6.1
+\# StartTime: Sat Sep 28 12:00:12 EDT 2024
 $
 	- you can use the python argparse library (see numerous simple examples via search)
  
