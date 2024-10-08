@@ -14,8 +14,14 @@ class batteryTest:
     timeStart : datetime
     readings : list[tuple[float,float,datetime]]
 
+    def __str__(self):
+        outStr = f'# batcon Battery Conditioner and Capacity Test\n# TeamID: {self.teamID}\n# BatteryID: {self.batteryID}\n# LoadOhms: {str(self.loadOhms)}\n# StartTime: {str(self.timeStart)}\n# PollTime: {str(self.pollTime)}\n# PollNum: {str(self.pollNum)}\n# HashID: {self.hashID}\nVoltage,Current,Timestamp\n'
+        for reading in self.readings:
+            outStr += f'{str(reading[0])},{str(reading[1])},{str(reading[2])}\n'
+        return outStr
+    
 class batconReader:
-    headerRegex = re.compile(r'# batcon Battery Conditioner and Capacity Test\n# TeamID: (.+)\n# BatteryID: (.+)\n# LoadOhms: (.+)\n# StartTime: (.+)\n# PollTime: (.+)\n# PollNum: (.+)\n# HashID: (.+)')
+    headerRegex = re.compile(r'# batcon Battery Conditioner and Capacity Test\n# HashID: (.+)\n# TeamID: (.+)\n# BatteryID: (.+)\n# LoadOhms: (.+)\n# StartTime: (.+)\n# PollTime: (.+)\n# PollNum: (.+)')
     def __init__(self,filepath=None):
         self.filepath = filepath
         self.tests = {}
@@ -30,24 +36,24 @@ class batconReader:
         for entry in entryList:
             header = self.headerRegex.match(entry)
             if header:
-                teamid = header.group(1)
-                batid = header.group(2)
-                loadohms = float(header.group(3))
-                starttime = datetime.strptime(header.group(4), '%Y-%m-%d %H:%M:%S.%f%z')
-                polltime = int(header.group(5))
-                pollnum = int(header.group(6))
-                hashid = header.group(7)
+                hashid = header.group(1)
+                teamid = header.group(2)
+                batid = header.group(3)
+                loadohms = float(header.group(4))
+                starttime = datetime.strptime(header.group(5), '%Y-%m-%d %H:%M:%S.%f%z')
+                polltime = int(header.group(6))
+                pollnum = int(header.group(7))
                 readings = entry.split('Voltage,Current,Timestamp\n')[1]
                 readings = readings.split('\n')[:-1]
                 readings = csv.reader(readings)
-                processedReadings = [(float(reading[0]),float(reading[1]),datetime.strptime(reading[2], '%H:%M:%S.%f')) for reading in readings]
+                processedReadings = [(float(reading[0]),float(reading[1]),datetime.strptime(reading[2], '%H:%M:%S.%f').time()) for reading in readings]
                 self.tests[hashid] = batteryTest(hashid,teamid,batid,loadohms,polltime,pollnum,starttime,processedReadings)
     
 if __name__ == '__main__':
     reader = batconReader('history.dat')
     reader.parseFile()
     for ele in reader.tests.values():
-        print(ele.hashID)
+        print(ele)
     
 
 

@@ -49,6 +49,10 @@ parser.add_argument('--pollnum', type=int,
 #args.log.close()
 #format for comma-separated values: (Voltage,Current,Time)
 args = parser.parse_args()
+if not args.id:
+    raise RuntimeError("no battery ID specified")
+elif not args.loadohms:
+    raise RuntimeError("no resistance load specified")
 timestamp = str(datetime.datetime.now().astimezone())
 hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltime)+str(args.pollnum)+timestamp
 hashSeedBytes = bytearray()
@@ -58,7 +62,7 @@ hasher = hashlib.shake_256(hashSeedBytes)
 file = open(args.outfile, 'a') 
 file.write("------------------------------------------------\n")
 file.write("# batcon Battery Conditioner and Capacity Test")
-file.write(f"\n# TeamID: {args.team}\n# BatteryID: {args.id}\n# LoadOhms: {str(args.loadohms)}\n# StartTime: {timestamp}\n# PollTime: {str(args.polltime)}\n# PollNum: {str(args.pollnum)}\n# HashID: {hasher.hexdigest(4)}\nVoltage,Current,Timestamp\n")
+file.write(f"\n# HashID: {hasher.hexdigest(4)}\n# TeamID: {args.team}\n# BatteryID: {args.id}\n# LoadOhms: {str(args.loadohms)}\n# StartTime: {timestamp}\n# PollTime: {str(args.polltime)}\n# PollNum: {str(args.pollnum)}\nVoltage,Current,Timestamp\n")
 readings = []
 for i in range(args.pollnum):
     timestamp = datetime.datetime.now().time() #timestamp
