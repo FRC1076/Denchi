@@ -45,21 +45,4 @@ file = open(args.outfile, 'a')
 file.write("------------------------------------------------\n")
 file.write("# batcon Battery Conditioner and Capacity Test")
 file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {args.loadohms} \n# StartTime: {str(datetime.datetime.now().astimezone())}\n")
-'''
-for i in range(0, 30):
-    file.write("# batcon Battery Conditioner and Capacity Test")
-    file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {args.loadohms} \n# StartTime: {str(datetime.datetime.now())}")
-    #a = "\nbattery info"+str(i)
-    #file.write(a)
-    #time.sleep(0.4)
-    """
-    file.write(args.id)
-    file.write("\n#")
-    file.write(args.team)
-    file.write("\n#")
-    file.write(args.loadohms)
-    file.write("\n#")
-    file.write(args.outfile)
-    """
-'''
 file.close()
