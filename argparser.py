@@ -42,8 +42,6 @@ parser.add_argument('--outfile', type=str,
                     help= 'OutputFile', nargs='?', const='history.dat', default='history.dat')
 parser.add_argument('--polltime', type=int,
                     help='Polling interval in milliseconds', nargs='?',const='100',default='100')
-parser.add_argument('--pollnum', type=int,
-                    help='number of times to poll the battery',nargs='?',const=5,default=5)
 
 #args.log.write('%s' % (args.id, args.team, args.loadohms, args.outfile))
 #args.log.close()
@@ -54,7 +52,7 @@ if not args.id:
 elif not args.loadohms:
     raise RuntimeError("no resistance load specified")
 timestamp = str(datetime.datetime.now().astimezone())
-hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltime)+str(args.pollnum)+timestamp
+hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltime)+timestamp
 hashSeedBytes = bytearray()
 hashSeedBytes.extend(map(ord, hashSeedString))
 hasher = hashlib.shake_256(hashSeedBytes)
@@ -62,9 +60,9 @@ hasher = hashlib.shake_256(hashSeedBytes)
 file = open(args.outfile, 'a') 
 file.write("------------------------------------------------\n")
 file.write("# batcon Battery Conditioner and Capacity Test")
-file.write(f"\n# HashID: {hasher.hexdigest(4)}\n# TeamID: {args.team}\n# BatteryID: {args.id}\n# LoadOhms: {str(args.loadohms)}\n# StartTime: {timestamp}\n# PollTime: {str(args.polltime)}\n# PollNum: {str(args.pollnum)}\nVoltage,Current,Timestamp\n")
+file.write(f"\n# HashID: {hasher.hexdigest(4)}\n# TeamID: {args.team}\n# BatteryID: {args.id}\n# LoadOhms: {str(args.loadohms)}\n# StartTime: {timestamp}\n# PollTime: {str(args.polltime)}\nVoltage,Current,Timestamp\n")
 readings = []
-for i in range(args.pollnum):
+for i in range(5):
     timestamp = datetime.datetime.now().time() #timestamp
     voltage = battery.voltage()/1000 #voltage in volts
     current = voltage/args.loadohms #current in amps
