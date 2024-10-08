@@ -1,5 +1,7 @@
 import argparse
 import time
+import sys
+import datetime
 parser = argparse.ArgumentParser(
     description='criteria for battery conditioner file')
 
@@ -9,7 +11,7 @@ parser = argparse.ArgumentParser(
 # BatteryID: 2025A 
 # LoadOhms: 6.1
 # StartTime: Sat Sep 28 12:00:12 EDT 2024 $ 
-"""
+'''
 parser = argparse.ArgumentParser(
     description='sum the integers at the command line')
 parser.add_argument(
@@ -19,9 +21,12 @@ parser.add_argument(
     '--log', default=sys.stdout, type=argparse.FileType('w'),
     help='the file where the sum should be written')
 args = parser.parse_args()
-#args.log.write('%s' % sum(args.integers))
-#args.log.close()
-"""
+args.log.write('%s' % sum(args.integers))
+args.log.close()
+'''
+parser = argparse.ArgumentParser(
+    description="batcon Battery Conditioner and Capacity Test"
+)
 parser.add_argument('--id', type=str,
                     help= 'BatteryID')
 parser.add_argument('--team', type=str,
@@ -29,18 +34,24 @@ parser.add_argument('--team', type=str,
 parser.add_argument('--loadohms', type=str,
                     help= 'LoadOhms')
 parser.add_argument('--outfile', type=str,
-                    help= 'StartTime')
+                    help= 'OutputFile')
 
-#print(parser.parse_args())
 #args.log.write('%s' % (args.id, args.team, args.loadohms, args.outfile))
 #args.log.close()
 
 args = parser.parse_args()
 
-with open(args.outfile, 'w') as file:
+file = open(args.outfile, 'a') 
+file.write("------------------------------------------------\n")
+file.write("# batcon Battery Conditioner and Capacity Test")
+file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {args.loadohms} \n# StartTime: {str(datetime.datetime.now())}\n")
+'''
+for i in range(0, 30):
     file.write("# batcon Battery Conditioner and Capacity Test")
-    file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {args.loadohms} \n# Starttime:") 
-
+    file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {args.loadohms} \n# StartTime: {str(datetime.datetime.now())}")
+    #a = "\nbattery info"+str(i)
+    #file.write(a)
+    #time.sleep(0.4)
     """
     file.write(args.id)
     file.write("\n#")
@@ -50,10 +61,5 @@ with open(args.outfile, 'w') as file:
     file.write("\n#")
     file.write(args.outfile)
     """
-"""
-with open(args.outfile, 'w') as file:
-    for i in range(0, 30):
-        a = "\nbattery info"+str(i)
-        file.write(a)
-        time.sleep(0.4)
-        """
+'''
+file.close()
