@@ -58,7 +58,7 @@ hasher = hashlib.shake_256(hashSeedBytes)
 file = open(args.outfile, 'a') 
 file.write("------------------------------------------------\n")
 file.write("# batcon Battery Conditioner and Capacity Test")
-file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {str(args.loadohms)} \n# StartTime: {timestamp}\n# PollTime: {str(args.polltime)}\n# HashID: {hasher.hexdigest(4)}\nTestID,Voltage,Current,Timestamp\n")
+file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {str(args.loadohms)} \n# StartTime: {timestamp}\n# PollTime: {str(args.polltime)}\n# PollNum: {str(args.pollnum)}\n# HashID: {hasher.hexdigest(4)}\nTestID,Voltage,Current,Timestamp\n")
 readings = []
 for i in range(args.pollnum):
     timestamp = datetime.datetime.now().time() #timestamp
