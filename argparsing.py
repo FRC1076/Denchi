@@ -44,7 +44,7 @@ args = parser.parse_args()
 file = open(args.outfile, 'a') 
 file.write("------------------------------------------------\n")
 file.write("# batcon Battery Conditioner and Capacity Test")
-file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {args.loadohms} \n# StartTime: {str(datetime.datetime.now())}\n")
+file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {args.loadohms} \n# StartTime: {str(datetime.datetime.now().astimezone())}\n")
 '''
 for i in range(0, 30):
     file.write("# batcon Battery Conditioner and Capacity Test")
