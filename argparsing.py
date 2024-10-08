@@ -30,11 +30,11 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--id', type=str,
                     help= 'BatteryID')
 parser.add_argument('--team', type=str,
-                    help= 'TeamID')
+                    help= 'TeamID', nargs='?',const='1076',default='1076')
 parser.add_argument('--loadohms', type=str,
                     help= 'LoadOhms')
 parser.add_argument('--outfile', type=str,
-                    help= 'OutputFile')
+                    help= 'OutputFile', nargs='?', const='history.dat', default='history.dat')
 
 #args.log.write('%s' % (args.id, args.team, args.loadohms, args.outfile))
 #args.log.close()
