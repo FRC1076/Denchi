@@ -50,6 +50,6 @@ file.write("------------------------------------------------\n")
 file.write("# batcon Battery Conditioner and Capacity Test")
 file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {str(args.loadohms)} \n# StartTime: {str(datetime.datetime.now().astimezone())}\n# PollTime: {str(args.polltime)}\n")
 for i in range(30):
-    file.write(f'# TEST {i}: VOLTS={battery.voltage()/1000},CURRENT={battery.voltage()/(1000 * args.loadohms)},TIME={str(datetime.datetime.now().time())}\n')
+    file.write(f'# TEST {i+1}: VOLTS={battery.voltage()/1000},CURRENT={battery.voltage()/(1000 * args.loadohms)},TIME={str(datetime.datetime.now().time())}\n')
     time.sleep(args.polltime/1000)
 file.close()
