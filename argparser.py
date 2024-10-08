@@ -3,8 +3,10 @@ import time
 import sys
 import datetime
 import testADC as ADC
+import hashlib
+import random
 
-battery = ADC.fake0MPC3008()
+battery = ADC.fake0MPC3008([12000,11500,11000,10500,10000])
 parser = argparse.ArgumentParser(
     description='criteria for battery conditioner file')
 
@@ -40,16 +42,29 @@ parser.add_argument('--outfile', type=str,
                     help= 'OutputFile', nargs='?', const='history.dat', default='history.dat')
 parser.add_argument('--polltime', type=int,
                     help='Polling interval in milliseconds', nargs='?',const='100',default='100')
+parser.add_argument('--pollnum', type=int,
+                    help='number of times to poll the battery',nargs='?',const=5,default=5)
 
 #args.log.write('%s' % (args.id, args.team, args.loadohms, args.outfile))
 #args.log.close()
-
+#format for comma-separated values: (Voltage,Current,Time)
 args = parser.parse_args()
+timestamp = str(datetime.datetime.now().astimezone())
+hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltime)+str(args.pollnum)+timestamp
+hashSeedBytes = bytearray()
+hashSeedBytes.extend(map(ord, hashSeedString))
+hasher = hashlib.shake_256(hashSeedBytes)
+
 file = open(args.outfile, 'a') 
 file.write("------------------------------------------------\n")
 file.write("# batcon Battery Conditioner and Capacity Test")
-file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {str(args.loadohms)} \n# StartTime: {str(datetime.datetime.now().astimezone())}\n# PollTime: {str(args.polltime)}\n")
-for i in range(30):
-    file.write(f'# TEST {i+1}: VOLTS={battery.voltage()/1000},CURRENT={battery.voltage()/(1000 * args.loadohms)},TIME={str(datetime.datetime.now().time())}\n')
+file.write(f"\n# TeamID: {args.team} \n# BatteryID: {args.id} \n# LoadOhms: {str(args.loadohms)} \n# StartTime: {timestamp}\n# PollTime: {str(args.polltime)}\n# HashID: {hasher.hexdigest(4)}\nTestID,Voltage,Current,Timestamp\n")
+readings = []
+for i in range(args.pollnum):
+    timestamp = datetime.datetime.now().time() #timestamp
+    voltage = battery.voltage()/1000 #voltage in volts
+    current = voltage/args.loadohms #current in amps
+    file.write(f'{str(voltage)},{str(current)},{str(timestamp)}\n')
+    readings.append((voltage,current,timestamp))
     time.sleep(args.polltime/1000)
 file.close()
