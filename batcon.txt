@@ -1,0 +1,5 @@
+# batcon Battery Conditioner and Capacity Test
+# TeamID: 1076 
+# BatteryID: 2025A 
+# LoadOhms: 6.1 
+# Starttime:
