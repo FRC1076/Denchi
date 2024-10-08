@@ -15,7 +15,7 @@ class batteryTest:
     readings : list[tuple[float,float,datetime]]
 
     def __str__(self):
-        outStr = f'# batcon Battery Conditioner and Capacity Test\n# TeamID: {self.teamID}\n# BatteryID: {self.batteryID}\n# LoadOhms: {str(self.loadOhms)}\n# StartTime: {str(self.timeStart)}\n# PollTime: {str(self.pollTime)}\n# PollNum: {str(self.pollNum)}\n# HashID: {self.hashID}\nVoltage,Current,Timestamp\n'
+        outStr = f'# batcon Battery Conditioner and Capacity Test\n# HashID: {self.hashID}\n# TeamID: {self.teamID}\n# BatteryID: {self.batteryID}\n# LoadOhms: {str(self.loadOhms)}\n# StartTime: {str(self.timeStart)}\n# PollTime: {str(self.pollTime)}\n# PollNum: {str(self.pollNum)}\nVoltage,Current,Timestamp\n'
         for reading in self.readings:
             outStr += f'{str(reading[0])},{str(reading[1])},{str(reading[2])}\n'
         return outStr
