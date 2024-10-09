@@ -45,7 +45,7 @@ void parse_arguments(int argc, char **argv, struct arguments *arguments) {
     }
 
     if (arguments->batID == NULL || arguments->loadohms <= 0) {
-        fprintf(stderr, "Usage: %s BATTERY LOADOHMS\n", argv[0]);
+        fprintf(stderr, "Usage: %s BATTERY LOADOHMS [OPTIONS]\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 }
