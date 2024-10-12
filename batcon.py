@@ -74,15 +74,15 @@ elif len(args.id) > 10:
     raise RuntimeError("Battery ID cannot be longer than 10 characters")
 initialTimestamp = time.localtime(time.time())
 initProcessTime = time.perf_counter_ns() // 1000000 #Process time in milliseconds
-timestamp = time.strftime(f"%a %b %d %H:%M:%S%z %Y",initialTimestamp)
-hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltime)+timestamp
+timestampstr = time.strftime(f"%a %b %d %H:%M:%S%z %Y",initialTimestamp)
+hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltime)+timestampstr
 hashSeedBytes = bytearray()
 hashSeedBytes.extend(map(ord, hashSeedString))
 hasher = hashlib.shake_256(hashSeedBytes)
 binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}_{args.id}_{time.strftime(f'%y%m%d-%H%M%S',initialTimestamp)}.bclog"
 #binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}-{args.id}.bclog"
-print("batcon Battery Conditioner and Capacity Test")
-print(f"Fingerprint: {hasher.hexdigest(4)}\nTeamID: {args.team}\nBatteryID: {args.id}\nLoadOhms: {str(args.loadohms)}\nStartTime: {timestamp}\nPollTime: {str(args.polltime)}\n")
+print("Battery Conditioner and Capacity Test")
+print(f"Fingerprint: {hasher.hexdigest(4)}\nTeamID: {args.team}\nBatteryID: {args.id}\nLoadOhms: {str(args.loadohms)}\nStartTime: {timestampstr}\nPollTime: {str(args.polltime)}")
 
 
 currentReadings = [] #list of current readings (amperes)
@@ -107,7 +107,7 @@ ampereSeconds = int(integrate.simpson(
     x = timedeltas
 )) # Gives result in ampere-seconds. Results are cast to int, so if the result is below 1, ampereseconds will equal zero
 with open(args.outfile, 'a') as outfile:
-    outfile.write(f"------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hasher.hexdigest(4)}\n# Team Number: {args.team}\n# Battery ID: {args.id}\n# Load (Ohms): {str(args.loadohms)}\n# Start Time: {timestamp}\n# Poll Interval: {str(args.polltime)}\n# Delta-V Logging Threshold: {str(args.logvolts)}\n# Minimum Volts: {args.minvolts}\n# Battery Life (Ampere-Hours): {str(ampereSeconds/3600)}\n# Logged at: {binfileName}\n")
+    outfile.write(f"------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hasher.hexdigest(4)}\n# Team Number: {args.team}\n# Battery ID: {args.id}\n# Load (Ohms): {str(args.loadohms)}\n# Start Time: {timestampstr}\n# Poll Interval: {str(args.polltime)}\n# Delta-V Logging Threshold: {str(args.logvolts)}\n# Minimum Volts: {args.minvolts}\n# Battery Life (Ampere-Hours): {str(ampereSeconds/3600)}\n# Logged at: {binfileName}\n")
 
 if not os.path.exists(f"./{config['system']['logdir']}"):
     os.mkdir(f"./{config['system']['logdir']}")

@@ -1,60 +1,70 @@
 from dataclasses import dataclass
 from datetime import datetime
+import time
 import re
 import csv
+import argparse
 
 @dataclass
 class batteryTest:
-    fingerprint : str
+    fingerprint : int
     teamID : str
     batteryID : str
     loadOhms : float
     pollTime : int
-    timeStart : datetime
-    readings : list[tuple[float,float,datetime]]
+    timeStart : time.struct_time
+    readings : list[tuple[float,float,int]]
     batteryLife : float
+    minvolts : float
+    logvolts : float
 
+    def getTimestamp(self):
+        '''returns start timestamp as a string'''
+        return time.strftime(f"%a %b %d %H:%M:%S%z %Y",self.timeStart)
     def __str__(self):
-        outStr = f'# batcon Battery Conditioner and Capacity Test\n# Fingerprint: {self.fingerprint}\n# TeamID: {self.teamID}\n# BatteryID: {self.batteryID}\n# LoadOhms: {str(self.loadOhms)}\n# StartTime: {str(self.timeStart)}\n# PollTime: {str(self.pollTime)}\nVoltage,Current,Timestamp\n'
+        outStr = f'------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hex(self.fingerprint)[2:]}\n# Team Number: {self.teamID}\n# Battery ID: {self.batteryID}\n# Load (Ohms): {str(self.loadOhms)}\n# Start Time: {self.getTimestamp()}\n# Poll Interval: {str(self.pollTime)}\n# Delta-V Logging Threshold: {str(self.logvolts)}\n# Minimum Volts: {self.minvolts}\n# Battery Life (Ampere-Hours): {str(self.batteryLife)}\nVoltage (Volts),Current (Amps),Time (ms)\n'
         for reading in self.readings:
             outStr += f'{str(reading[0])},{str(reading[1])},{str(reading[2])}\n'
-        outStr += f'Battery Life: {self.batteryLife}\n'
         return outStr
     
-class batconReader:
-    headerRegex = re.compile(r'# batcon Battery Conditioner and Capacity Test\n# Fingerprint: (.+)\n# TeamID: (.+)\n# BatteryID: (.+)\n# LoadOhms: (.+)\n# StartTime: (.+)\n# PollTime: (.+)')
-    def __init__(self,filepath=None):
-        self.filepath = filepath
-        self.tests = {}
+def readlog(filepath : str):
+    with open(filepath,'rb') as f:
+        logbytes = f.read()
+        fingerprint = int.from_bytes(logbytes[0:4],'big',signed=False)
+        team = str(int.from_bytes(logbytes[4:6],'big',signed=False))
+        batID = logbytes[6:16].decode("ascii").strip('\00')
+        startTime = time.localtime(int.from_bytes(logbytes[16:24],'big',signed=False))
+        loadohms = int.from_bytes(logbytes[24:28],'big',signed=False)/1000
+        polltime = int.from_bytes(logbytes[28:32],'big',signed=False)
+        minvolts = int.from_bytes(logbytes[32:36],'big',signed=False)/1000
+        logvolts = int.from_bytes(logbytes[36:40],'big',signed=False)/1000
+        batteryLife = int.from_bytes(logbytes[40:48],'big',signed=False)/3600
+        pointer = 48
+        readings = []
+        while pointer < len(logbytes):
+            reading = (int.from_bytes(logbytes[pointer:pointer+4],'big',signed=False)/1000,
+                       int.from_bytes(logbytes[pointer+4:pointer+8],'big',signed=False)/1000,
+                       int.from_bytes(logbytes[pointer+8:pointer+12],'big',signed=False))
+            readings.append(reading)
+            pointer += 12
+        return batteryTest(
+            fingerprint,
+            team,
+            batID,
+            loadohms,
+            polltime,
+            startTime,
+            readings,
+            batteryLife,
+            minvolts,
+            logvolts
+        )
 
-    def setFilepath(self,filepath):
-        self.filepath = filepath
 
-    def parseFile(self):
-        f = open(self.filepath,'r')
-        fileText = f.read()
-        entryList = fileText.split('------------------------------------------------\n')
-        for entry in entryList:
-            header = self.headerRegex.match(entry)
-            if header:
-                fprint = header.group(1)
-                teamid = header.group(2)
-                batid = header.group(3)
-                loadohms = float(header.group(4))
-                starttime = datetime.strptime(header.group(5), '%Y-%m-%d %H:%M:%S.%f%z')
-                polltime = int(header.group(6))
-                readings = entry.split('Voltage,Current,Timestamp\n')[1]
-                readings = readings.split('\n')[:-1] #Removes trailing newline
-                result = readings.pop(-1)[14:] #removes battery life result string from the readings. the first 14 characters are 'Battery Life: '
-                readings = csv.reader(readings)
-                processedReadings = [(float(reading[0]),float(reading[1]),datetime.strptime(reading[2], '%Y-%m-%d %H:%M:%S.%f%z')) for reading in readings]
-                self.tests[fprint] = batteryTest(fprint,teamid,batid,loadohms,polltime,starttime,processedReadings,float(result))
-    
+
 if __name__ == '__main__':
-    reader = batconReader('history.dat')
-    reader.parseFile()
-    for ele in reader.tests.values():
-        print(ele)
+    log = readlog('./logs/fade7cb8_SIMBAT_241012-123747.bclog')
+    print(log)
     
 
 
