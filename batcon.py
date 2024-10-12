@@ -105,7 +105,7 @@ while voltage > (args.minvolts * 1000):
 ampereSeconds = int(integrate.simpson(
     y = currentReadings,
     x = timedeltas
-)) # Gives result in ampere-seconds
+)) # Gives result in ampere-seconds. Results are cast to int, so if the result is below 1, ampereseconds will equal zero
 with open(args.outfile, 'a') as outfile:
     outfile.write(f"------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hasher.hexdigest(4)}\n# Team Number: {args.team}\n# Battery ID: {args.id}\n# Load (Ohms): {str(args.loadohms)}\n# Start Time: {timestamp}\n# Poll Interval: {str(args.polltime)}\n# Delta-V Logging Threshold: {str(args.logvolts)}\n# Minimum Volts: {args.minvolts}\n# Battery Life (Ampere-Hours): {str(ampereSeconds/3600)}\n# Logged at: {binfileName}\n")
 
