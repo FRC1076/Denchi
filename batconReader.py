@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import time
 import argparse
+import os
+import pandas
 
 @dataclass
 class batteryTest:
@@ -60,8 +62,46 @@ def readlog(filepath : str):
 
 
 if __name__ == '__main__':
-    log = readlog('./logs/fade7cb8_SIMBAT_241012-123747.bclog')
-    print(log)
+    parser = argparse.ArgumentParser(
+        description="Command line tool to process and export .bclog files"
+    )
+    subparsers = parser.add_subparsers()
+    parser.add_argument("logpath",type=str,help="path to log file")
+    parser.add_argument("-v","--verbose",action="store_true")
+
+    exportParser = subparsers.add_parser("E",help="export log",aliases=["Export","export"])
+    exportParser.set_defaults(export=True)
+    
+    exportParser.add_argument("-o","--outdir",help="name of the folder to export files to (must include trailing slash)",type=str,default='./')
+    exportParser.add_argument("-c","--compress",help="whether the export folder should be compressed",action="store_true")
+    exportParser.add_argument("-n","--name",help="Name of the exported files",type=str,default=None,dest="exportname")
+    exportParser.add_argument("--csv",help="export logs as a .csv file",action="store_true")
+    exportParser.add_argument("--json",help="export logs as a .json file",action="store_true")
+
+    args = parser.parse_args()
+    log = readlog(args.logpath)
+    if args.verbose:
+        print(f"Retrieved {args.logpath} at {time.strftime(f'%a %b %d %H:%M:%S%z %Y',time.localtime())}:")
+        print(log)
+        print("------------------------------------------------")
+
+    if args.export:
+        exportname = f"{hex(log.fingerprint)[2:]}_{log.batteryID}_{time.strftime(f'%y%m%d-%H%M%S',log.timeStart)}"
+
+        if args.exportname is not None:
+            exportname = args.exportname
+
+        if args.verbose:
+            print(f"Exporting log {hex(log.fingerprint)[2:]} to {args.outdir}{exportname}/")
+            print(f"----------------EXPORT SETTINGS-----------------\nCOMPRESSED: {args.compress}\nCSV: {args.csv}\nTSV: {args.tsv}\nJSON: {args.json}\n")
+        
+        exportPath = args.outdir + exportname + '/'
+        os.mkdir(exportPath)#TODO: Check if directory already exists
+
+        #generate header file
+        with open(exportPath + f'/{exportname}_HEADER.txt',"w") as headerf:
+            headerf.write()
+            
     
 
 
