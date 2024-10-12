@@ -79,7 +79,7 @@ hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltim
 hashSeedBytes = bytearray()
 hashSeedBytes.extend(map(ord, hashSeedString))
 hasher = hashlib.shake_256(hashSeedBytes)
-binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}_{args.id}_{initialTimestamp.strftime(f'%y%m%d-%H%M%S')}.bclog"
+binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}_{args.id}_{time.strftime(f'%y%m%d-%H%M%S',initialTimestamp)}.bclog"
 #binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}-{args.id}.bclog"
 print("batcon Battery Conditioner and Capacity Test")
 print(f"Fingerprint: {hasher.hexdigest(4)}\nTeamID: {args.team}\nBatteryID: {args.id}\nLoadOhms: {str(args.loadohms)}\nStartTime: {timestamp}\nPollTime: {str(args.polltime)}\n")
