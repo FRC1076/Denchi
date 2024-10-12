@@ -1,1 +1,0 @@
-This is a statically-linked standalone .exe file, cross-compiled by the gcc compiler in linux. This .exe file is not recommended
