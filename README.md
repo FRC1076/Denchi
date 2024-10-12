@@ -16,9 +16,9 @@ Battery conditioning (and capacity measurement) is a fairly simple task.
 
 1. A fully charged battery is connected to the device
 2. The controller instructs a relay to connect the battery to a load so the battery starts discharging
-3. The controller monitors the voltage vi the ADC of the battery as it discharges, recording the information over time
+3. The controller monitors the voltage (via the ADC) of the battery as the battery discharges, recording the information over time
 4. At the designated "empty" voltage level, the controller records the end of the discharge phase, disconnects the battery from the load, and connects the battery to a battery charger.
-5. The controller processes all of the time and voltage data from the discharge phase and uses it to create a report of the battery capacity.   (this requires some simple math to compute the integral of the current over time (current is voltage times the load resistance).   The result of the integral is the battery capacity in Amps times hours, or Ah.
+5. The controller processes all of the time and voltage data from the discharge phase and uses it to create a report of the battery capacity.   (this requires some simple math to compute the integral of the current over time (current is voltage divided by the load resistance).   The result of the integral is the battery capacity in Amps times hours, or Ah.
 
 ## Performance Requirements (Wish List)
 
