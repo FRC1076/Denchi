@@ -5,6 +5,7 @@ import testADC as ADC
 import hashlib
 import scipy.integrate as integrate
 import os
+import tomli
 
 #NOTE: Binary mode stores headers for Linux
 battery = ADC.fake0MPC3008([12000,11500,11000,10500,10000])
@@ -30,25 +31,37 @@ args = parser.parse_args()
 args.log.write('%s' % sum(args.integers))
 args.log.close()
 '''
+def intToBytes(num,size=32):
+    #Converts ints into bytes
+    #size is in bits, not bytes
+    if num < 0:
+        num += (1 << size) 
+    bytes = []
+    for i in range(size//8):
+        byte = (num % (1 << size-(8*i))) >> (size - 8 * (i+1))
+        bytes.append(byte)
+    return tuple(bytes)
+
+with open("batconfig.toml",'rb') as confile:
+    config = tomli.load(confile)
+
 parser = argparse.ArgumentParser(
     description="batcon Battery Conditioner and Capacity Test"
 )
 parser.add_argument('-i','--id', type=str,
                     help= 'ID of the Battery being conditioned')
 parser.add_argument('-m','--minvolts', type=float,
-                    help='minimum voltage (when the battery reaches this voltage, the battery is considered drained and batcon will stop)')
+                    help='minimum voltage (when the battery reaches this voltage, the battery is considered drained and batcon will stop)',default=config['battery']['minvolts'])
 parser.add_argument('-l','--loadohms', type=float,
-                    help= 'Resistance load applied to the battery')
-parser.add_argument('-s','logvolts', type=float,
-                    help="minimum change in voltage needed to be logged (if set to 0, all readings are logged)", default='0.0')
+                    help= 'Resistance load applied to the battery',default=config['battery']['loadohms'])
+parser.add_argument('-v','--logvolts', type=float,
+                    help="minimum change in voltage needed to be logged (if set to 0, all readings are logged)", default=config['system']['logvolts'])
 parser.add_argument('-t','--team', type=str,
-                    help= 'Team number (defaults to 1076)',default='1076')
+                    help= 'Team number',default=config['user']['team'])
 parser.add_argument('-o','--outfile', type=str,
-                    help= 'File to output text to (defaults to \'history.dat\')', default='history.dat')
+                    help= 'File to output text to', default=config['system']['outfile'])
 parser.add_argument('-p','--polltime', type=int,
-                    help='Polling interval in milliseconds (defaults to 100)', default='100')
-parser.add_argument('-b','--binary', action='store_true',default=False, nargs=0,
-                    help='Whether or not to generate binary logfile (defaults to false)')
+                    help='Polling interval in milliseconds', default=config['system']['polltime'])
 
 #args.log.write('%s' % (args.id, args.team, args.loadohms, args.outfile))
 #args.log.close()
@@ -58,53 +71,62 @@ if not args.id:
     raise RuntimeError("no battery ID specified")
 elif not args.loadohms:
     raise RuntimeError("no resistance load specified")
-initialTimestamp = datetime.datetime.now().astimezone()
-initProcessTime = time.process_time_ns() // 1000000 #Process time in milliseconds
-timestamp = str(initialTimestamp)
+elif len(args.id) > 10:
+    raise RuntimeError("Battery ID cannot be longer than 10 characters")
+initialTimestamp = time.localtime(time.time())
+initProcessTime = time.perf_counter_ns() // 1000000 #Process time in milliseconds
+timestamp = time.strftime(f"%a %b %d %H:%M:%S%z %Y",initialTimestamp)
 hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltime)+timestamp
 hashSeedBytes = bytearray()
 hashSeedBytes.extend(map(ord, hashSeedString))
 hasher = hashlib.shake_256(hashSeedBytes)
+#binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}_{args.team}_{args.id}_{initialTimestamp.strftime(f'%y%m%d-%H%M%S')}.bindat"
+binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}-{args.id}.bclog"
 print("batcon Battery Conditioner and Capacity Test")
 print(f"Fingerprint: {hasher.hexdigest(4)}\nTeamID: {args.team}\nBatteryID: {args.id}\nLoadOhms: {str(args.loadohms)}\nStartTime: {timestamp}\nPollTime: {str(args.polltime)}\n")
 
 
-file = open(args.outfile, 'a') 
-file.write("------------------------------------------------\n")
-file.write("# batcon Battery Conditioner and Capacity Test")
-file.write(f"\n# Fingerprint: {hasher.hexdigest(4)}\n# TeamID: {args.team}\n# BatteryID: {args.id}\n# LoadOhms: {str(args.loadohms)}\n# StartTime: {timestamp}\n# PollTime: {str(args.polltime)}\nVoltage,Current,Timestamp\n")
 currentReadings = [] #list of current readings (amperes)
 timedeltas = [] #list of time deltas where readings were taken (seconds)
 logs = []
-for i in range(5):
+args.minvolts *= 1000
+voltage = args.minvolts + 1
+lastLoggedVoltage = 1000000000
+while voltage > args.minvolts:
     #TODO: Optimize, remove datetime stuff and unnecessary unit conversions, fix batcon reader
-    timestamp = datetime.datetime.now().astimezone() #timestamp
-    processTime = (time.process_time_ns()//1000000) - initProcessTime
-    logs.append(voltage,current,processTime)
-    voltage = battery.voltage()/1000 #voltage in volts
-    current = voltage/args.loadohms #current in amps
-    file.write(f'{str(voltage)},{str(current)},{str(timestamp)}\n')
-    currentReadings.append(current)
-    timedeltas.append((timestamp-initialTimestamp).total_seconds())
+    processTime = (time.perf_counter_ns()//1000000) - initProcessTime #processTime in milliseconds
+    voltage = battery.voltage() #voltage in milliamps
+    current = int(voltage/args.loadohms) #current in milliamps
+    if (lastLoggedVoltage - voltage) >= (args.logvolts*1000):
+        logs.append((voltage,current,processTime))
+        current /= 1000 #current in amps
+        currentReadings.append(current)
+        timedeltas.append(processTime/1000)
     time.sleep(args.polltime/1000)
 
-ampereHours = integrate.simpson(
+ampereSeconds = int(integrate.simpson(
     y = currentReadings,
     x = timedeltas
-) # Gives result in ampere-seconds, not ampere hours. units need to be converted
-ampereHours *= 0.0002777778
-file.write(f'Battery Life: {str(ampereHours)}\n')
-file.close()
+)) # Gives result in ampere-seconds
+with open(args.outfile, 'a') as outfile:
+    outfile.write(f"------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hasher.hexdigest(4)}\n# Team Number: {args.team}\n# Battery ID: {args.id}\n# Load (Ohms): {str(args.loadohms)}\n# Start Time: {timestamp}\n# Poll Interval: {str(args.polltime)}\n# Delta-V Logging Threshold: {str(args.logvolts)}\n# Minimum Volts: {args.minvolts}\n# Battery Life (Ampere-Hours): {str(ampereSeconds/3600)}\n# Logged at: {binfileName}\n")
 
-if args.binary:
-    binfile = 0
-    binfileName = f"logs/{hasher.hexdigest(4)}_{args.team}_{args.id}_{initialTimestamp.strftime(f'%y%m%d-%H%M%S')}.bindat"
-    try:
-        binfile = open(binfileName,'wb')
-    except FileNotFoundError:
-        print("WARNING: directory './logs' not found")
-        os.mkdir('logs')
-        print("directory './logs' successfully created")
-        binfile = open(binfileName,'wb')
-    
+if not os.path.exists(f"./{config['system']['logdir']}"):
+    os.mkdir(f"./{config['system']['logdir']}")
+
+with open(binfileName,'wb') as binlog:
+    binlog.write(hasher.digest(4))
+    binlog.write(bytes(intToBytes(int(args.team),size=16)))
+    binlog.write(bytes(args.id.rjust(10,'\00'),'ascii'))
+    binlog.write(bytes(intToBytes(int(time.mktime(initialTimestamp)),size=64)))
+    binlog.write(bytes(intToBytes(int(args.loadohms*1000),size=32)))
+    binlog.write(bytes(intToBytes(int(args.polltime),size=32)))
+    binlog.write(bytes(intToBytes(int(args.minvolts*1000),size=32)))
+    binlog.write(bytes(intToBytes(int(args.logvolts*1000),size=32)))
+    binlog.write(bytes(intToBytes(ampereSeconds,size=64)))
+    for log in logs:
+        binlog.write(bytes(intToBytes(log[0],size=32)))
+        binlog.write(bytes(intToBytes(log[1],size=32)))
+        binlog.write(bytes(intToBytes(log[2],size=32)))
+
 

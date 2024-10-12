@@ -1,15 +1,11 @@
 [user]
     team = '1076'
     teamname = 'PiHi Samurai'
-[battery_settings]
-    logvolts = 0 #minimum voltage change needed for a reading to be logged. When this is set to 0, all readings are logged
-    minvolts = 10 #the voltage that the battery must reach to be considered drained
-    loadohms = 6.1 #the resistance load applied to the batteries by the conditioner
-[system_settings]
-    logdir = './logs' #Directory where binary logs are stored
-    histfile = 'history.dat' #File where headers are recorded
-[build_settings]
-    python_version = '3.10.11'
-    dependencies = [
-        'scipy'
-    ]
+[battery]
+    minvolts = 10 #the voltage that the battery must reach to be considered drained, in volts
+    loadohms = 6.1 #the resistance load applied to the batteries by the conditioner, in ohms
+[system]
+    logdir = 'logs' #Directory where binary logs are stored
+    outfile = 'history.dat' #File where headers are recorded
+    polltime = 100 #Default polling interval, in milliseconds
+    logvolts = 0.0 #minimum difference in voltage needed to be logged, in volts. If set at 0, all readings are logged
