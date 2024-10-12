@@ -1,0 +1,11 @@
+[user]
+    team = '1076'
+    teamname = 'PiHi Samurai'
+[battery]
+    minvolts = 10 #the voltage that the battery must reach to be considered drained, in volts
+    loadohms = 6.1 #the resistance load applied to the batteries by the conditioner, in ohms
+[system]
+    logdir = 'logs' #Directory where binary logs are stored
+    outfile = 'history.dat' #File where headers are recorded
+    polltime = 100 #Default polling interval, in milliseconds
+    logvolts = 0.0 #minimum difference in voltage needed to be logged, in volts. If set at 0, all readings are logged
