@@ -1,6 +1,5 @@
 import argparse
 import time
-import datetime
 import testADC as ADC
 import hashlib
 import scipy.integrate as integrate
@@ -80,8 +79,8 @@ hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltim
 hashSeedBytes = bytearray()
 hashSeedBytes.extend(map(ord, hashSeedString))
 hasher = hashlib.shake_256(hashSeedBytes)
-#binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}_{args.team}_{args.id}_{initialTimestamp.strftime(f'%y%m%d-%H%M%S')}.bindat"
-binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}-{args.id}.bclog"
+binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}_{args.id}_{initialTimestamp.strftime(f'%y%m%d-%H%M%S')}.bclog"
+#binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}-{args.id}.bclog"
 print("batcon Battery Conditioner and Capacity Test")
 print(f"Fingerprint: {hasher.hexdigest(4)}\nTeamID: {args.team}\nBatteryID: {args.id}\nLoadOhms: {str(args.loadohms)}\nStartTime: {timestamp}\nPollTime: {str(args.polltime)}\n")
 
@@ -89,10 +88,9 @@ print(f"Fingerprint: {hasher.hexdigest(4)}\nTeamID: {args.team}\nBatteryID: {arg
 currentReadings = [] #list of current readings (amperes)
 timedeltas = [] #list of time deltas where readings were taken (seconds)
 logs = []
-args.minvolts *= 1000
-voltage = args.minvolts + 1
+voltage = (args.minvolts * 1000) + 1
 lastLoggedVoltage = 1000000000
-while voltage > args.minvolts:
+while voltage > (args.minvolts * 1000):
     #TODO: Optimize, remove datetime stuff and unnecessary unit conversions, fix batcon reader
     processTime = (time.perf_counter_ns()//1000000) - initProcessTime #processTime in milliseconds
     voltage = battery.voltage() #voltage in milliamps
