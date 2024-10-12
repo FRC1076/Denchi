@@ -47,8 +47,7 @@ with open("batconfig.toml",'rb') as confile:
 parser = argparse.ArgumentParser(
     description="batcon Battery Conditioner and Capacity Test"
 )
-parser.add_argument('-i','--id', type=str,
-                    help= 'ID of the Battery being conditioned')
+parser.add_argument('id', type=str,help= 'ID of the Battery being conditioned')
 parser.add_argument('-m','--minvolts', type=float,
                     help='minimum voltage (when the battery reaches this voltage, the battery is considered drained and batcon will stop)',default=config['battery']['minvolts'])
 parser.add_argument('-l','--loadohms', type=float,
