@@ -1,9 +1,9 @@
 The FRC 1076 Battery Conditioning tool by default exports its logs in the .bclog file format. a .bclog file is divided into two sections:
-the header, and the data section. 
+the header, and the data section. (OUTDATED)
 
 #### The header
 
-The header takes up the first 48 bytes, and is broken down as follows (NOTE: each
+The header takes up the first 40 bytes, and is broken down as follows (NOTE: each
 element is listed in the order that it appears in an actual .bclog file):
 4 bytes: Fingerprint of the log (int)
 2 bytes: team number (int)
@@ -13,7 +13,6 @@ element is listed in the order that it appears in an actual .bclog file):
 4 bytes: the polling time, in milliseconds (int)
 4 bytes: the minimum voltage of the battery, in millivolts (int)
 4 bytes: the minimum voltage change that is logged, in millivolts (if this is set to 0, every reading is logged) (int)
-8 bytes: the total life of the battery, in Ampere-seconds (int)
 
 #### The data
 
@@ -21,3 +20,10 @@ The data is unbounded in size, but is divided into 12 byte long readings. Each r
 4 bytes: voltage reading in millivolts (int)
 4 bytes: current reading, in milliamperes (int)
 4 bytes: time since conditioning began, in milliseconds (int)
+
+#### The end
+
+the ending takes up the final 8 bytes of a bclog file, and is down as follows:
+8 bytes: the total life of the battery, in Ampere-seconds (int)
+
+

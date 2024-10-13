@@ -40,7 +40,7 @@ def readlog(filepath : str):
         batteryLife = int.from_bytes(logbytes[40:48],'big',signed=False)/3600
         pointer = 48
         readings = []
-        while pointer < len(logbytes):
+        while pointer < len(logbytes)-8:
             reading = (int.from_bytes(logbytes[pointer:pointer+4],'big',signed=False)/1000,
                        int.from_bytes(logbytes[pointer+4:pointer+8],'big',signed=False)/1000,
                        int.from_bytes(logbytes[pointer+8:pointer+12],'big',signed=False))
@@ -93,14 +93,18 @@ if __name__ == '__main__':
 
         if args.verbose:
             print(f"Exporting log {hex(log.fingerprint)[2:]} to {args.outdir}{exportname}/")
-            print(f"----------------EXPORT SETTINGS-----------------\nCOMPRESSED: {args.compress}\nCSV: {args.csv}\nTSV: {args.tsv}\nJSON: {args.json}\n")
+            print(f"----------------EXPORT SETTINGS-----------------\nCOMPRESSED: {args.compress}\nCSV: {args.csv}\nJSON: {args.json}\n")
         
         exportPath = args.outdir + exportname + '/'
         os.mkdir(exportPath)#TODO: Check if directory already exists
 
         #generate header file
-        with open(exportPath + f'/{exportname}_HEADER.txt',"w") as headerf:
-            headerf.write()
+        with open(exportPath + '/HEADER.txt',"w") as headerf:
+            headerf.write(f"# Battery Conditioner and Capacity Test\n# Fingerprint: {hex(log.fingerprint)[2:]}\n# Team Number: {log.teamID}\n# Battery ID: {log.batteryID}\n# Load (Ohms): {str(log.loadOhms)}\n# Start Time: {log.getTimestamp()}\n# Poll Interval: {str(log.pollTime)}\n# Delta-V Logging Threshold: {str(log.logvolts)}\n# Minimum Volts: {log.minvolts}\n# Battery Life (Ampere-Hours): {str(log.batteryLife)}\n")
+        
+        if args.csv:
+            with open(exportPath + '/data.csv') as  csvf:
+                pass
             
     
 

@@ -166,4 +166,7 @@ history.dat
 historyunix.dat
 *.dat
 *.bindat
-logs/*
+logs/
+
+#C Build settings
+.vscode/
