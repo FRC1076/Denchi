@@ -1,0 +1,10 @@
+# Battery Conditioner and Capacity Test
+# Fingerprint: fbf44a81
+# Team Number: 1076
+# Battery ID: SIMBAT
+# Load (Ohms): 6.1
+# Start Time: Sat Oct 12 23:44:05-0400 2024
+# Poll Interval: 100
+# Delta-V Logging Threshold: 0.0
+# Minimum Volts: 10000.0
+# Battery Life (Ampere-Hours): 0.0

@@ -38,7 +38,7 @@ def readlog(filepath : str):
         minvolts = int.from_bytes(logbytes[32:36],'big',signed=False)/1000
         logvolts = int.from_bytes(logbytes[36:40],'big',signed=False)/1000
         batteryLife = int.from_bytes(logbytes[40:48],'big',signed=False)/3600
-        pointer = 48
+        pointer = 40
         readings = []
         while pointer < len(logbytes)-8:
             reading = (int.from_bytes(logbytes[pointer:pointer+4],'big',signed=False)/1000,
@@ -46,6 +46,7 @@ def readlog(filepath : str):
                        int.from_bytes(logbytes[pointer+8:pointer+12],'big',signed=False))
             readings.append(reading)
             pointer += 12
+        batteryLife = int.from_bytes(logbytes[pointer:pointer+8],'big',signed=False)/3600
         return batteryTest(
             fingerprint,
             team,
