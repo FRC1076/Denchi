@@ -3,6 +3,7 @@ import time
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 import io
+from typing import BinaryIO
 from scipy import integrate
 
 def intToBytes(num,size=32):
@@ -42,28 +43,28 @@ class batLoggerBase(ABC):
         Current in milliamps
         Time in milliseconds since start of testing
         '''
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def end(self):
         '''
         end the logging, write ending to output
         '''
-        pass
+        raise NotImplementedError
 
     @abstractmethod
     def start(self):
         '''
         begin the logging, write header to output
         '''
-        pass
+        raise NotImplementedError
 
 class streamBatLogger(batLoggerBase):
 
     '''
     receives data from an input bytes-like object, logs data to an output bytes-like object
     '''
-    def __init__(self,header,input:io.BufferedReader,output:io.BufferedWriter):
+    def __init__(self,header,input:BinaryIO,output:BinaryIO):
         super().__init__(header)
         self.instream = input
         self.outstream = output

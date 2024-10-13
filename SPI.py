@@ -1,14 +1,14 @@
 import busio
 import digitalio
 import board
-import adafruit_mcp3xxx.mcp3800 as MCP
+import adafruit_mcp3xxx.mcp3008 as MCP
 from adafruit_mcp3xxx.analog_in import AnalogIn
 
 spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
 cs = digitalio.DigitalInOut(board.D5)
 mcp = MCP.MCP3008(spi, cs)
 
-from gpiozero import PWMLED, MCP3000
+from gpiozero import PWMLED, MCP3008
 from time import sleep
 pot = MCP3008(0)
 led = PWMLED(14)
