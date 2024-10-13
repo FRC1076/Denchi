@@ -1,7 +1,7 @@
 
 import time
 from dataclasses import dataclass
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 import io
 from typing import BinaryIO
 from scipy import integrate
@@ -28,7 +28,7 @@ class header:
     minvolts : int #millivolts
     logvolts : int #millivolts
 
-class batLoggerBase(ABC):
+class batLoggerBase(metaclass=ABCMeta):
 
     def __init__(self,header:header):
         self.header = header

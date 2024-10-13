@@ -9,3 +9,6 @@
     outfile = 'history.dat' #File where headers are recorded
     polltime = 100 #Default polling interval, in milliseconds
     logvolts = 0.0 #minimum difference in voltage needed to be logged, in volts. If set at 0, all readings are logged
+[electrical]
+    voltDivider = 4 #Analog voltage inputs are divided by this constant before being read by the ADC
+    refVoltageComp = 13.2 #ADC reference voltage, compensated for the voltage divider. Should be equal to the ADC's actual reference voltage * voltDivider
