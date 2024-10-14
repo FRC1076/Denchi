@@ -1,5 +1,5 @@
-The FRC 1076 Battery Conditioning tool by default exports its logs in the .bclog file format. a .bclog file is divided into two sections:
-the header, and the data section. (OUTDATED)
+The FRC 1076 Battery Conditioning tool by default exports its logs in the .bclog file format. a .bclog file is divided into three sections:
+the header, the data section, and the ending
 
 #### The header
 
