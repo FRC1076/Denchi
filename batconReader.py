@@ -3,6 +3,7 @@ import time
 import argparse
 import tarfile
 import io
+import os
 import pandas as pd
 import tomli
 
@@ -65,9 +66,35 @@ def readlog(filepath : str):
             logvolts
         )
 
+class exportTool:
+    def __init__(self):
+        self.parser = argparse.ArgumentParser(
+            description="Command line tool to read, process, and export .bclog files"
+        )
+        subparsers = self.parser.add_subparsers(required=False)
+        self.parser.add_argument("logpath",type=str,help="path to log file")
+        self.parser.add_argument("-v","--verbose",action="store_true")
+        self.parser.set_defaults(export=False)
 
+        exportParser = subparsers.add_parser("E",help="export log as a tar archive",aliases=["Export","Tar"])
+        exportParser.set_defaults(export=True)
+    
+        exportParser.add_argument("-o","--outfile",help="name of the file to export to",type=str,default=None)
+        exportParser.add_argument("-c","--compress",help="compress tar archive using gzip",action="store_true")
+        exportParser.add_argument("--csv",help="export logs as a csv file",action="store_true")
+        exportParser.add_argument("--tsv",help="export logs as a tsv file",action="store_true")
+        exportParser.add_argument("--xml",help="export logs as an xml file",action="store_true")
+        exportParser.add_argument("--arrow",help="export logs as an Arrow file",action="store_true")
+        exportParser.add_argument("--parquet",help="export logs as a Parquet file",action="store_true")
+        exportParser.add_argument("--hdf",help="export logs as an hdf5 file",action="store_true")
+        exportParser.add_argument("--orc",help="export logs as an orc file",action="store_true")
+        exportParser.add_argument("--json",help="export logs as a json file",action="store_true")
 
 if __name__ == '__main__':
+    # Test command: python3 batconReader.py -v E -c --csv --tsv --xml --arrow --parquet --orc --json -o test ./logs/test.bclog
+    # Export commands (Unix): 
+    # cd exports
+    # tar xf test.tar.gz
     parser = argparse.ArgumentParser(
         description="Command line tool to process and export .bclog files"
     )
@@ -87,7 +114,6 @@ if __name__ == '__main__':
     exportParser.add_argument("--xml",help="export logs as an xml file",action="store_true")
     exportParser.add_argument("--arrow",help="export logs as an Arrow file",action="store_true")
     exportParser.add_argument("--parquet",help="export logs as a Parquet file",action="store_true")
-    exportParser.add_argument("--hdf",help="export logs as an hdf5 file",action="store_true")
     exportParser.add_argument("--orc",help="export logs as an orc file",action="store_true")
     exportParser.add_argument("--json",help="export logs as a json file",action="store_true")
 
@@ -100,35 +126,36 @@ if __name__ == '__main__':
 
     if args.export:
 
+        os.mkdir(config['system']['exdir'])
         if args.outfile is None:
             exportname = f"{hex(log.fingerprint)[2:]}_{log.batteryID}_{time.strftime(f'%y%m%d-%H%M%S',log.timeStart)}.tar"
         else:
-            exportname = f"{args.out}"
+            exportname = f"{args.outfile}.tar"
         
         if args.compress:
             exportname += '.gz'
         
         files = {
-            'header.txt' : bytes(f"# Battery Conditioner and Capacity Test\n# Fingerprint: {hex(log.fingerprint)[2:]}\n# Team Number: {log.teamID}\n# Battery ID: {log.batteryID}\n# Load (Ohms): {str(log.loadOhms)}\n# Start Time: {log.getTimestamp()}\n# Poll Interval: {str(log.pollTime)}\n# Delta-V Logging Threshold: {str(log.logvolts)}\n# Minimum Volts: {log.minvolts}\n# Battery Life (Ampere-Hours): {str(log.batteryLife)}\n",'ascii')
+            'header.txt' : bytes(f"# Battery Conditioner and Capacity Test\n# Fingerprint: {hex(log.fingerprint)[2:]}\n# Team Number: {log.teamID}\n# Battery ID: {log.batteryID}\n# Load (Ohms): {str(log.loadOhms)}\n# Start Time: {log.getTimestamp()}\n# Poll Interval: {str(log.pollTime)}\n# Delta-V Logging Threshold: {str(log.logvolts)}\n# Minimum Volts: {log.minvolts}\n# Battery Life (Ampere-Hours): {str(log.batteryLife)}",'ascii')
         }
         if args.verbose:
             print(f"Exporting log {hex(log.fingerprint)[2:]} to ./{config['system']['exdir']}/{exportname}")
-            print(f"----------------EXPORT SETTINGS-----------------\nCOMPRESSED: {args.compress}\nCSV: {args.csv}\nTSV: {args.tsv}\nXML: {args.xml}\nARROW: {args.arrow}\nJSON: {args.json}\n")
+            print(f"----------------EXPORT SETTINGS-----------------\nCOMPRESSED: {args.compress}\nCSV: {args.csv}\nTSV: {args.tsv}\nXML: {args.xml}\nARROW: {args.arrow}\nPARQUET: {args.parquet}\nORC: {args.orc}\nJSON: {args.json}\n------------------------------------------------")
 
         logframe = pd.DataFrame(data=log.readings,columns=['voltage_mV','current_mA','time_ms'])
 
         if args.csv:
-            files['data.csv'] = bytes(logframe.to_csv())
+            files['data.csv'] = bytes(logframe.to_csv(),'utf-8')
             if args.verbose:
                 print("Created CSV file")
 
         if args.tsv:
-            files['data.tsv'] = bytes(logframe.to_csv(sep="\t"))
+            files['data.tsv'] = bytes(logframe.to_csv(sep="\t"),'utf-8')
             if args.verbose:
                 print("Created TSV file")
 
         if args.xml:
-            files['data.xml'] = bytes(logframe.to_xml())
+            files['data.xml'] = bytes(logframe.to_xml(),'utf-8')
             if args.verbose:
                 print("Created XML file")
 
@@ -150,22 +177,13 @@ if __name__ == '__main__':
             if args.verbose:
                 print("Created Parquet file")
 
-        if args.hdf:
-            hdf5Stream = io.BytesIO()
-            logframe.to_hdf(hdf5Stream)
-            hdf5Stream.seek(0)
-            files['data.hdf5'] = hdf5Stream.read()
-            hdf5Stream.close()
-            if args.verbose:
-                print("Created HDF5 file")
-
         if args.orc:
             files['data.orc'] = logframe.to_orc()
             if args.verbose:
                 print("Created ORC file")
 
         if args.json:
-            files['data.json'] = bytes(logframe.to_json())
+            files['data.json'] = bytes(logframe.to_json(orient='records'),'utf-8')
             if args.verbose:
                 print("Created JSON file")
 
