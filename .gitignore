@@ -161,12 +161,15 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# ignore history file
+# ignore history files and logs
 history.dat
 historyunix.dat
 *.dat
 *.bindat
 logs/
 
-#C Build settings
+# ignore exported files
+exports/
+
+# C Build settings
 .vscode/
