@@ -100,6 +100,7 @@ class adcReaderBase(SPIDeviceReaderBase,metaclass=ABCMeta):
 
 # Base class for all MCP3xxx readers
 class mcp3xxxReaderBase(adcReaderBase,metaclass=ABCMeta):
+    #TODO: add default refvoltage
     '''Base class for all mcp3xxx readers. Reads from a single pin on the mcp3xxx'''
     def __init__(self, 
                  spi : busio.SPI, 
@@ -158,6 +159,17 @@ class mcp3xxxReaderBase(adcReaderBase,metaclass=ABCMeta):
         if size != -1:
             return struct.pack(">H",self.getAnalog_mV(self.__read(self._pin,self._readDiff))).rjust(size,'\00')
         return self.readall()
+
+class mcp3008Reader(mcp3xxxReaderBase):
+    def __init__(
+            self, 
+            spi : busio.SPI, 
+            cs : digitalio.DigitalInOut,
+            refVolts : float, 
+            pin : int, 
+            readDiff : bool = False):
+        super().__init__(spi,cs,refVolts,pin,readDiff)
+        self._out_buf[0] = 0x01
 
 if __name__ == "__main__":
     print(type(SPIDeviceReaderBase))
