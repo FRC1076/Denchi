@@ -80,8 +80,8 @@ class streamBatLogger(batLoggerBase):
         self.outstream.write(bytes(intToBytes(int(time.mktime(self.header.timeStart)),size=64)))
         self.outstream.write(bytes(intToBytes(int(self.header.loadOhms*1000),size=32)))
         self.outstream.write(bytes(intToBytes(int(self.header.pollTime),size=32)))
-        self.outstream.write(bytes(intToBytes(int(self.header.minvolts*1000),size=32)))
-        self.outstream.write(bytes(intToBytes(int(self.header.logvolts*1000),size=32)))
+        self.outstream.write(bytes(intToBytes(int(self.header.minvolts),size=32)))
+        self.outstream.write(bytes(intToBytes(int(self.header.logvolts),size=32)))
 
     def end(self):
         '''ends logging, returns battery life calculation'''
