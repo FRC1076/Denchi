@@ -6,6 +6,7 @@ import io
 import os
 import pandas as pd
 import tomli
+from typing import BinaryIO
 
 with open("batconfig.toml",'rb') as confile:
     config = tomli.load(confile)
@@ -35,41 +36,107 @@ class batteryTest:
         for reading in self.readings:
             outStr += f'\n{str(reading[0])},{str(reading[1])},{str(reading[2])}'
         return outStr
-    
+
+def readStream(logStream : BinaryIO):
+    logbytes = logStream.read()
+    fingerprint = int.from_bytes(logbytes[0:4],'big',signed=False)
+    team = str(int.from_bytes(logbytes[4:6],'big',signed=False))
+    batID = logbytes[6:16].decode("utf-8").strip('\00')
+    startTime = time.localtime(int.from_bytes(logbytes[16:24],'big',signed=False))
+    loadohms = int.from_bytes(logbytes[24:28],'big',signed=False)/1000
+    polltime = int.from_bytes(logbytes[28:32],'big',signed=False)
+    minvolts = int.from_bytes(logbytes[32:36],'big',signed=False)/1000
+    logvolts = int.from_bytes(logbytes[36:40],'big',signed=False)/1000
+    batteryLife = int.from_bytes(logbytes[40:48],'big',signed=False)/3600
+    pointer = 40
+    readings = []
+    while pointer < len(logbytes)-8:
+        reading = (int.from_bytes(logbytes[pointer:pointer+4],'big',signed=False)/1000,
+                    int.from_bytes(logbytes[pointer+4:pointer+8],'big',signed=False)/1000,
+                    int.from_bytes(logbytes[pointer+8:pointer+12],'big',signed=False))
+        readings.append(reading)
+        pointer += 12
+    batteryLife = int.from_bytes(logbytes[pointer:pointer+8],'big',signed=False)/3600
+    return batteryTest(
+        fingerprint,
+        team,
+        batID,
+        loadohms,
+        polltime,
+        startTime,
+        readings,
+        batteryLife,
+        minvolts,
+        logvolts
+    )
+
 def readlog(filepath : str):
     with open(filepath,'rb') as f:
-        logbytes = f.read()
-        fingerprint = int.from_bytes(logbytes[0:4],'big',signed=False)
-        team = str(int.from_bytes(logbytes[4:6],'big',signed=False))
-        batID = logbytes[6:16].decode("utf-8").strip('\00')
-        startTime = time.localtime(int.from_bytes(logbytes[16:24],'big',signed=False))
-        loadohms = int.from_bytes(logbytes[24:28],'big',signed=False)/1000
-        polltime = int.from_bytes(logbytes[28:32],'big',signed=False)
-        minvolts = int.from_bytes(logbytes[32:36],'big',signed=False)/1000
-        logvolts = int.from_bytes(logbytes[36:40],'big',signed=False)/1000
-        batteryLife = int.from_bytes(logbytes[40:48],'big',signed=False)/3600
-        pointer = 40
-        readings = []
-        while pointer < len(logbytes)-8:
-            reading = (int.from_bytes(logbytes[pointer:pointer+4],'big',signed=False)/1000,
-                       int.from_bytes(logbytes[pointer+4:pointer+8],'big',signed=False)/1000,
-                       int.from_bytes(logbytes[pointer+8:pointer+12],'big',signed=False))
-            readings.append(reading)
-            pointer += 12
-        batteryLife = int.from_bytes(logbytes[pointer:pointer+8],'big',signed=False)/3600
-        return batteryTest(
-            fingerprint,
-            team,
-            batID,
-            loadohms,
-            polltime,
-            startTime,
-            readings,
-            batteryLife,
-            minvolts,
-            logvolts
-        )
+        log = readStream(f)
+    return log
 
+def exportLogToTar(log : batteryTest, dest, args, compress=False, verbose = False) -> None:
+    '''
+    args is a list of filetypes to export to. Options include:
+    csv,tsv,xml,arrow,parquet,orc,json'''
+    files = {
+        'header.json' : bytes(f" {{ \n\t\"fingerprint\": \"{hex(log.fingerprint)}\",\n\t\"team\": \"{log.teamID}\",\n\t\"battery\": \"{log.batteryID}\",\n\t\"loadOhms\": {str(log.loadOhms)},\n\t\"startTime\": \"{log.getISO8601Timestamp()}\",\n\t\"pollTime\": {str(log.pollTime)},\n\t\"logVolts\": {str(log.logvolts)},\n\t\"minVolts\": {log.minvolts},\n\t\"batteryLife\": {str(log.batteryLife)}\n }} ",'utf-8')
+    }
+    logframe = pd.DataFrame(data=log.readings,columns=['voltage_mV','current_mA','time_ms'])
+    if "csv" in args:
+        files['data.csv'] = bytes(logframe.to_csv(),'utf-8')
+        if verbose:
+            print("Created CSV file")
+
+    if "tsv" in args:
+        files['data.tsv'] = bytes(logframe.to_csv(sep="\t"),'utf-8')
+        if verbose:
+            print("Created TSV file")
+
+    if "xml" in args:
+        files['data.xml'] = bytes(logframe.to_xml(),'utf-8')
+        if verbose:
+            print("Created XML file")
+
+    if "arrow" in args:
+        arrowStream = io.BytesIO()
+        logframe.to_feather(arrowStream)
+        arrowStream.seek(0)
+        files['data.arrow'] = arrowStream.read()
+        arrowStream.close()
+        if verbose:
+            print("Created Arrow file")
+
+    if "parquet" in args:
+        parquetStream = io.BytesIO()
+        logframe.to_parquet(parquetStream)
+        parquetStream.seek(0)
+        files['data.parquet'] = parquetStream.read()
+        parquetStream.close()
+        if verbose:
+            print("Created Parquet file")
+
+    if "orc" in args:
+        files['data.orc'] = logframe.to_orc()
+        if verbose:
+            print("Created ORC file")
+
+    if "json" in args:
+        files['data.json'] = bytes(logframe.to_json(orient='records'),'utf-8')
+        if verbose:
+            print("Created JSON file")
+    
+    with tarfile.open(fileobj=dest,mode='w:gz' if compress else 'w') as tar:
+        for filename,content in files.items():
+            fileStream = io.BytesIO(content)
+            tarinfo = tarfile.TarInfo(name=filename)
+            tarinfo.size = len(content)
+            
+            tar.addfile(tarinfo=tarinfo,fileobj=fileStream)
+            if verbose:
+                print(f"Archived {filename}")
+            fileStream.close()
+    
 class exportTool:
 
     def __init__(self,args):
@@ -207,122 +274,12 @@ if __name__ == '__main__':
     # tar xf test.tar.gz
     # Test command 2: python3 batconReader.py -v P ./logs/test2.bclog
     tests = {
-        'test1' : ["-v","P","./testlogs/test.bclog"],
+        'test1' : ["P","./testlogs/test.bclog"],
         'test2' : ["-v","E",'-c','--csv','--tsv','--tsv','--xml','--arrow','--parquet','--orc','--json','-o','test','./testlogs/test.bclog']
     }
-    args = exportTool.parse_args(args=tests['test2'])
+    args = exportTool.parse_args(args=tests['test1'])
     export = exportTool(args)
     export.process()
-    """
-    parser = argparse.ArgumentParser(
-        description="Command line tool to process and export .bclog files"
-    )
-    subparsers = parser.add_subparsers(required=False)
-    parser.add_argument("logpath",type=str,help="path to log file")
-    parser.add_argument("-v","--verbose",action="store_true")
-    parser.set_defaults(cmd="print")
-
-    exportParser = subparsers.add_parser("E",help="export log as a tar archive",aliases=["export","tar"],add_help=True)
-    exportParser.set_defaults(cmd="export")
-    nullParser = subparsers.add_parser("P",help="Only prints the log on the console",aliases=["print", "display"])
-    
-    exportParser.add_argument("-o","--outfile",help="name of the file to export to",type=str,default=None)
-    exportParser.add_argument("-c","--compress",help="compress tar archive using gzip",action="store_true")
-    exportParser.add_argument("--csv",help="export logs as a csv file",action="store_true")
-    exportParser.add_argument("--tsv",help="export logs as a tsv file",action="store_true")
-    exportParser.add_argument("--xml",help="export logs as an xml file",action="store_true")
-    exportParser.add_argument("--arrow",help="export logs as an Arrow file",action="store_true")
-    exportParser.add_argument("--parquet",help="export logs as a Parquet file",action="store_true")
-    exportParser.add_argument("--orc",help="export logs as an orc file",action="store_true")
-    exportParser.add_argument("--json",help="export logs as a json file",action="store_true")
-
-    args = parser.parse_args()
-    log = readlog(args.logpath)
-    if args.verbose:
-        print(f"Retrieved {args.logpath} at {time.strftime(f'%a %b %d %H:%M:%S%z %Y',time.localtime())}:")
-        print(log)
-        print("------------------------------------------------")
-
-    if args.cmd == "export":
-        if not os.path.exists(f"./{config['system']['exdir']}"):
-            os.mkdir(config['system']['exdir'])
-
-        if args.outfile is None:
-            exportname = f"{hex(log.fingerprint)[2:]}_{log.batteryID}_{time.strftime(f'%y%m%d-%H%M%S',log.timeStart)}.tar"
-        else:
-            exportname = f"{args.outfile}.tar"
-        
-        if args.compress:
-            exportname += '.gz'
-        
-        files = {
-            'header.json' : bytes(f" {{ \n\t\"fingerprint\": \"{hex(log.fingerprint)}\",\n\t\"team\": \"{log.teamID}\",\n\t\"battery\": \"{log.batteryID}\",\n\t\"loadOhms\": {str(log.loadOhms)},\n\t\"startTime\": \"{log.getISO8601Timestamp()}\",\n\t\"pollTime\": {str(log.pollTime)},\n\t\"logVolts\": {str(log.logvolts)},\n\t\"minVolts\": {log.minvolts},\n\t\"batteryLife\": {str(log.batteryLife)}\n }} ",'utf-8')
-        }
-        if args.verbose:
-            print(f"Exporting log {hex(log.fingerprint)[2:]} to ./{config['system']['exdir']}/{exportname}")
-            print(f"----------------EXPORT SETTINGS-----------------\nCOMPRESSED: {args.compress}\nCSV: {args.csv}\nTSV: {args.tsv}\nXML: {args.xml}\nARROW: {args.arrow}\nPARQUET: {args.parquet}\nORC: {args.orc}\nJSON: {args.json}\n------------------------------------------------")
-
-        logframe = pd.DataFrame(data=log.readings,columns=['voltage_mV','current_mA','time_ms'])
-
-        if args.csv:
-            files['data.csv'] = bytes(logframe.to_csv(),'utf-8')
-            if args.verbose:
-                print("Created CSV file")
-
-        if args.tsv:
-            files['data.tsv'] = bytes(logframe.to_csv(sep="\t"),'utf-8')
-            if args.verbose:
-                print("Created TSV file")
-
-        if args.xml:
-            files['data.xml'] = bytes(logframe.to_xml(),'utf-8')
-            if args.verbose:
-                print("Created XML file")
-
-        if args.arrow:
-            arrowStream = io.BytesIO()
-            logframe.to_feather(arrowStream)
-            arrowStream.seek(0)
-            files['data.arrow'] = arrowStream.read()
-            arrowStream.close()
-            if args.verbose:
-                print("Created Arrow file")
-
-        if args.parquet:
-            parquetStream = io.BytesIO()
-            logframe.to_parquet(parquetStream)
-            parquetStream.seek(0)
-            files['data.parquet'] = parquetStream.read()
-            parquetStream.close()
-            if args.verbose:
-                print("Created Parquet file")
-
-        if args.orc:
-            files['data.orc'] = logframe.to_orc()
-            if args.verbose:
-                print("Created ORC file")
-
-        if args.json:
-            files['data.json'] = bytes(logframe.to_json(orient='records'),'utf-8')
-            if args.verbose:
-                print("Created JSON file")
-
-
-        with tarfile.open(f"./{config['system']['exdir']}/{exportname}",mode='x:gz' if args.compress else 'x') as tar:
-            for filename,content in files.items():
-                fileStream = io.BytesIO(content)
-                tarinfo = tarfile.TarInfo(name=filename)
-                tarinfo.size = len(content)
-                
-                tar.addfile(tarinfo=tarinfo,fileobj=fileStream)
-                if args.verbose:
-                    print(f"Archived {filename} in ./{config['system']['exdir']}/{exportname}")
-                fileStream.close()
-        """
-
-            
-
-
 
         
             

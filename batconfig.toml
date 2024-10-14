@@ -11,14 +11,13 @@
     polltime = 100 #Default polling interval, in milliseconds
     logvolts = 0.0 #minimum difference in voltage needed to be logged, in volts. If set at 0, all readings are logged
     dependencies = [
-        "scipy",
-        "pyarrow",
-        "busio",
-        "digitalio",
-        "pandas",
-        "numpy",
-        'lxml'
-    ]
+        'scipy',
+        'pyarrow',
+        'busio',
+        'digitalio',
+        'pandas',
+        'numpy',
+        'lxml']
 [electrical]
     voltDivider = 4 #Analog voltage inputs are divided by this constant before being read by the ADC
     refVoltageRaw = 3.3 #ADC reference voltage, not compensated for the volt divider

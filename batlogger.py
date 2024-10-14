@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from abc import ABCMeta, abstractmethod
 from typing import BinaryIO
 from scipy import integrate
+import sys
 
 def intToBytes(num,size=32):
     #Converts ints into bytes
@@ -108,6 +109,15 @@ class streamBatLogger(batLoggerBase):
             self.logs.append((voltage_mV,current_mA,time_ms))
             self.previousVoltage = voltage_mV
         return voltage_mV
+
+class pipeLogger(streamBatLogger):
+    '''receives data from stdin, logs data to stdout. Is meant to be piped in a unix-like system'''
+    def __init__(self,header):
+        super().__init__(
+            header,
+            sys.stdin.buffer,
+            sys.stdout.buffer
+        )
     
 
 
