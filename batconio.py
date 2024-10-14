@@ -1,6 +1,5 @@
 # manages I/O with devices for batcon
 
-import adafruit_mcp3xxx.mcp3008 as MCP
 from adafruit_bus_device.spi_device import SPIDevice
 import busio
 import digitalio
@@ -8,12 +7,7 @@ import struct
 import io
 from collections.abc import ByteString
 from abc import ABCMeta, abstractmethod
-import tomli
 
-with open("batconfig.toml",'rb') as confile:
-    config = tomli.load(confile)
-
-io.BufferedIOBase.readinto()
 # To improve readability, any abstract classes should explicitly have their metaclass set to ABCMeta
 class SPIDeviceReaderBase(io.RawIOBase,metaclass=ABCMeta):
     def __init__(self,spi : busio.SPI, cs : digitalio.DigitalInOut):
@@ -93,21 +87,34 @@ class adcReaderBase(SPIDeviceReaderBase,metaclass=ABCMeta):
         self.refVolts = refVolts
 
     @abstractmethod
-    def getAnalog_mV(self, reading):
+    def getAnalog_mV(self, reading : int) -> int:
         '''Processes digital reading to be expressed in millivolts'''
+        raise NotImplementedError
+    
+    @abstractmethod
+    def getAnalog_V(self, reading : int) -> float:
+        '''Processes digital reading to be expressed in volts'''
         raise NotImplementedError
 
 
 # Base class for all MCP3xxx readers
 class mcp3xxxReaderBase(adcReaderBase,metaclass=ABCMeta):
     #TODO: add default refvoltage
-    '''Base class for all mcp3xxx readers. Reads from a single pin on the mcp3xxx'''
     def __init__(self, 
                  spi : busio.SPI, 
                  cs : digitalio.DigitalInOut,
-                 refVolts : float, 
                  pin : int, 
+                 refVolts : float, 
                  readDiff : bool = False):
+        """
+        Base class for all mcp3xxx readers. Reads from a single pin on the mcp3xxx
+    
+        :param busio.SPI spi: SPI device
+        :param digitalio.DigitalInOut cs: chip select pin
+        :param int pin: pin to read from
+        :param float refVolts: ADC reference voltage, compensated for any scaling (volt division, etc.) applied to the signal.
+        :param bool readDiff: whether or not the device should take a differential reading
+        """
         super().__init__(spi,cs,refVolts)
         self._out_buf = bytearray(3)
         self._in_buf = bytearray(3)
@@ -127,8 +134,12 @@ class mcp3xxxReaderBase(adcReaderBase,metaclass=ABCMeta):
         self._readDiff = diff
 
     # Override
-    def getAnalog_mV(self, reading):
-        return super().getAnalog_mV(reading)
+    def getAnalog_V(self, reading) -> float:
+        return (reading/1024) * self.refVolts
+    
+    # Override
+    def getAnalog_mV(self, reading) -> int:
+        return int(self.getAnalog_V(reading) * 1000)
     
     def __read(self, pin: int, is_differential: bool = False) -> int:
         """SPI Interface for MCP3xxx-based ADCs reads. Due to 10-bit accuracy, the returned
@@ -139,7 +150,6 @@ class mcp3xxxReaderBase(adcReaderBase,metaclass=ABCMeta):
         """
         self._out_buf[1] = ((not is_differential) << 7) | (pin << 4)
         with self._device as spi:
-            # pylint: disable=no-member
             spi.write_readinto(self._out_buf, self._in_buf)
         return ((self._in_buf[1] & 0x03) << 8) | self._in_buf[2]
     
@@ -156,6 +166,7 @@ class mcp3xxxReaderBase(adcReaderBase,metaclass=ABCMeta):
     
     # Override
     def read(self, size = -1) -> bytes:
+        '''returns reading, expressed as millivolts, as big-endian bytes in a bytes object of size `size`'''
         if size != -1:
             return struct.pack(">H",self.getAnalog_mV(self.__read(self._pin,self._readDiff))).rjust(size,'\00')
         return self.readall()
@@ -168,6 +179,29 @@ class mcp3008Reader(mcp3xxxReaderBase):
             refVolts : float, 
             pin : int, 
             readDiff : bool = False):
+        """
+        Class for mcp3008 readers. Reads from a single pin on the mcp3008
+
+        MCP3008 Differential channel mapping. The following list of available differential readings
+        takes the form ``(positive_pin, negative_pin) = (channel A) - (channel B)``.
+
+        - (P0, P1) = CH0 - CH1
+        - (P1, P0) = CH1 - CH0
+        - (P2, P3) = CH2 - CH3
+        - (P3, P2) = CH3 - CH2
+        - (P4, P5) = CH4 - CH5
+        - (P5, P4) = CH5 - CH4
+        - (P6, P7) = CH6 - CH7
+        - (P7, P6) = CH7 - CH6
+
+        If you are taking differential values, you should enter the pin of the first channel in the mapping
+    
+        :param busio.SPI spi: SPI device
+        :param digitalio.DigitalInOut cs: chip select pin
+        :param int pin: pin to read from
+        :param float refVolts: ADC reference voltage, compensated for any scaling (volt division, etc.) applied to the signal.
+        :param bool readDiff: whether or not the device should take a differential reading
+        """
         super().__init__(spi,cs,refVolts,pin,readDiff)
         self._out_buf[0] = 0x01
 
