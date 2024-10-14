@@ -2,7 +2,6 @@
 import time
 from dataclasses import dataclass
 from abc import ABCMeta, abstractmethod
-import io
 from typing import BinaryIO
 from scipy import integrate
 
