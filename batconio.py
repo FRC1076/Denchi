@@ -205,26 +205,6 @@ class mcp3008Reader(mcp3xxxReaderBase):
         super().__init__(spi,cs,refVolts,pin,readDiff)
         self._out_buf[0] = 0x01
 
-class ADCIOFunctor:
-    '''a functor that generates a function which translates an ADC's digital output into an analog signal in millivolts
-    
-    :param dMin: The minimum digital value of the ADC 
-    :param dMax: The maximum digital value of the ADC
-    :param refVolts: The maximum voltage reading of the ADC (adjusted for any signal attenuation)
-    :param ADCReadFunc: a function that returns a direct digital reading from the ADC. It should be encapsulated in a lambda function that does not take any parameters
-    '''
-    def __init__(self,dMin : int,dMax : int,refVolts : float,readFunc) -> None:
-        #x is a digital reading from the ADC
-        self.__dMin = dMin
-        self.__dMax = dMax
-        self.__refVolts = refVolts
-        self.__transFunc = lambda x : (int)((x/(dMax-dMin) - dMin) * refVolts * 1000)
-        self.__readFunc = readFunc
-
-    def __call__(self) -> int:
-        '''returns a translated reading'''
-        return self.__transFunc(self.__readFunc())
-
 def ADCIOFuncFactory(dMin,dMax,refVolts,readFunc):
     '''a function factory that generates a function which translates an ADC's digital output into an analog signal in millivolts
     
