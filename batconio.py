@@ -96,7 +96,6 @@ class adcReaderBase(SPIDeviceReaderBase,metaclass=ABCMeta):
         '''Processes digital reading to be expressed in volts'''
         raise NotImplementedError
 
-
 # Base class for all MCP3xxx readers
 class mcp3xxxReaderBase(adcReaderBase,metaclass=ABCMeta):
     #TODO: add default refvoltage
@@ -107,7 +106,7 @@ class mcp3xxxReaderBase(adcReaderBase,metaclass=ABCMeta):
                  refVolts : float, 
                  readDiff : bool = False):
         """
-        Base class for all mcp3xxx readers. Reads from a single pin on the mcp3xxx
+        Base class for all mcp3xxx readers. Reads from a single pin on the mcp3xxx DEPRECATED
     
         :param busio.SPI spi: SPI device
         :param digitalio.DigitalInOut cs: chip select pin
@@ -207,6 +206,7 @@ class mcp3008Reader(mcp3xxxReaderBase):
 
 if __name__ == "__main__":
     print(type(SPIDeviceReaderBase))
+    print(type(lambda x : 2))
 
     
 

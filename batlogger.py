@@ -63,6 +63,7 @@ class streamBatLogger(batLoggerBase):
 
     '''
     receives data from an input bytes-like object, logs data to an output bytes-like object
+    DEPRECATED, funcStreamBatLogger is preferred
     '''
     def __init__(self,header,input:BinaryIO,output:BinaryIO):
         super().__init__(header)
@@ -118,7 +119,45 @@ class pipeLogger(streamBatLogger):
             sys.stdin.buffer,
             sys.stdout.buffer
         )
+
+class funcStreamBatLogger(batLoggerBase):
+
+    '''receives data from a function, logs data to an output bytestream. input should be a reference to a function that returns the voltage reading in millivolts. THIS IS THE RECOMMENDED IMPLEMENTATION OF BATLOGGER'''
+    def __init__(self,header,input:function,output:BinaryIO):
+        super().__init__(header)
+        self.infunc = input
+        self.outstream = output
+        self.logs = []
+        self.startTimeInternal = None #internal timer, separate from the header's timestamp. time is measured in milliseconds
+        self.previousVoltage = 100000000000000000 #For measuring voltage difference
     
+    
+    def end(self) -> None:
+        '''ends logging, returns battery life calculation'''
+        currentReadings = [ele[1]/1000 for ele in self.logs] #current readings in amperes
+        deltaS = [ele[2]/1000 for ele in self.logs] #timestamps in seconds
+        ampereSeconds = int(integrate.simpson(
+            y = currentReadings,
+            x = deltaS
+        ))
+        self.outstream.write(bytes(intToBytes(ampereSeconds,size=64)))
+        self.outstream.close()
+        return ampereSeconds
+
+    def recordReading(self) -> int:
+        '''
+        automatically records a reading from the input stream and records it to the output stream if the voltage difference is high enough. Also returns a copy of the voltage reading
+        '''
+        voltage_mV = self.infunc()
+        current_mA = int(voltage_mV/self.header.loadOhms)
+        time_ms = (time.perf_counter_ns()//1000000) - self.startTimeInternal
+        if self.previousVoltage - voltage_mV >= self.header.logvolts:
+            self.outstream.write(bytes(intToBytes(voltage_mV,size=32)))
+            self.outstream.write(bytes(intToBytes(current_mA,size=32)))
+            self.outstream.write(bytes(intToBytes(time_ms,size=32)))
+            self.logs.append((voltage_mV,current_mA,time_ms))
+            self.previousVoltage = voltage_mV
+        return voltage_mV
 
 
 
