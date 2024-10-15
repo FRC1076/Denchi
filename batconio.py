@@ -7,6 +7,7 @@ import struct
 import io
 from collections.abc import ByteString
 from abc import ABCMeta, abstractmethod
+from typing import Callable
 
 # To improve readability, any abstract classes should explicitly have their metaclass set to ABCMeta
 class SPIDeviceReaderBase(io.RawIOBase,metaclass=ABCMeta):
@@ -205,18 +206,20 @@ class mcp3008Reader(mcp3xxxReaderBase):
         super().__init__(spi,cs,refVolts,pin,readDiff)
         self._out_buf[0] = 0x01
 
-def ADCIOFuncFactory(dMin,dMax,refVolts,readFunc):
+def ADCIOFuncFactory(
+        dMin : int,
+        dMax : int,
+        refVolts : float,
+        readFunc : Callable):
     '''a function factory that generates a function which translates an ADC's digital output into an analog signal in millivolts
     
     :param dMin: The minimum digital value of the ADC 
     :param dMax: The maximum digital value of the ADC
     :param refVolts: The maximum voltage reading of the ADC (adjusted for any signal attenuation)
-    :param ADCReadFunc: a function that returns a direct digital reading from the ADC.
+    :param ADCReadFunc: a reference to a function that returns a direct digital reading from the ADC.
     '''
     return lambda *args,**kwargs : (int)((readFunc(*args,**kwargs)/(dMax-dMin) - dMin) * refVolts * 1000)
 if __name__ == "__main__":
-    print(type(SPIDeviceReaderBase))
-    print(type(lambda x : 2))
     MCP3008Function = ADCIOFuncFactory(
         0,
         1023,

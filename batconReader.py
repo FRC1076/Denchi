@@ -274,7 +274,7 @@ if __name__ == '__main__':
     # tar xf test.tar.gz
     # Test command 2: python3 batconReader.py -v P ./logs/test2.bclog
     tests = {
-        'test1' : ["P","./testlogs/test.bclog"],
+        'test1' : ["P","./logs/30ad0342_SIMBAT_241015-131109.bclog"],
         'test2' : ["-v","E",'-c','--csv','--tsv','--tsv','--xml','--arrow','--parquet','--orc','--json','-o','test','./testlogs/test.bclog']
     }
     args = exportTool.parse_args(args=tests['test1'])

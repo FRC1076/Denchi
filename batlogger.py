@@ -2,7 +2,7 @@
 import time
 from dataclasses import dataclass
 from abc import ABCMeta, abstractmethod
-from typing import BinaryIO
+from typing import BinaryIO, Callable
 from scipy import integrate
 import sys
 
@@ -123,7 +123,7 @@ class pipeLogger(streamBatLogger):
 class funcStreamBatLogger(batLoggerBase):
 
     '''receives data from a function, logs data to an output bytestream. input should be a reference to a function that returns the voltage reading in millivolts. THIS IS THE RECOMMENDED IMPLEMENTATION OF BATLOGGER'''
-    def __init__(self,header,input:function,output:BinaryIO):
+    def __init__(self,header,input : Callable, output : BinaryIO):
         super().__init__(header)
         self.infunc = input
         self.outstream = output
@@ -131,7 +131,17 @@ class funcStreamBatLogger(batLoggerBase):
         self.startTimeInternal = None #internal timer, separate from the header's timestamp. time is measured in milliseconds
         self.previousVoltage = 100000000000000000 #For measuring voltage difference
     
-    
+    def start(self):
+        self.startTimeInternal = time.perf_counter_ns()//1000000
+        self.outstream.write(bytes(intToBytes(self.header.fingerprint,size=32)))
+        self.outstream.write(bytes(intToBytes(int(self.header.teamID),size=16)))
+        self.outstream.write(bytes(self.header.batteryID.rjust(10,'\00'),'ascii'))
+        self.outstream.write(bytes(intToBytes(int(time.mktime(self.header.timeStart)),size=64)))
+        self.outstream.write(bytes(intToBytes(int(self.header.loadOhms*1000),size=32)))
+        self.outstream.write(bytes(intToBytes(int(self.header.pollTime),size=32)))
+        self.outstream.write(bytes(intToBytes(int(self.header.minvolts),size=32)))
+        self.outstream.write(bytes(intToBytes(int(self.header.logvolts),size=32)))
+        
     def end(self) -> None:
         '''ends logging, returns battery life calculation'''
         currentReadings = [ele[1]/1000 for ele in self.logs] #current readings in amperes

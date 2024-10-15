@@ -7,7 +7,9 @@ import os
 import tomli
 import io
 from batlogger import streamBatLogger
+from batlogger import funcStreamBatLogger
 from batlogger import header
+import struct
 
 parser = argparse.ArgumentParser(
     description='criteria for battery conditioner file')
@@ -100,12 +102,27 @@ batLogger = streamBatLogger(header=header(
     input=battery,
     output=logfile
 )
+batLogger2 = funcStreamBatLogger(header=header(
+        int.from_bytes(hasher.digest(4),'big'),
+        args.team,
+        args.id,
+        args.loadohms,
+        args.polltime,
+        initialTimestamp,
+        int(args.minvolts * 1000),
+        int(args.logvolts * 1000)
+    ),
+    input = lambda : int.from_bytes(battery.read(4),'big',signed=False),
+    output = logfile
+)
 voltage = int(args.minvolts * 1000) + 1
-batLogger.start()
+batLogger2.start()
 while voltage > (args.minvolts * 1000):
-    voltage = batLogger.recordReading()
+    voltage = batLogger2.recordReading()
     time.sleep(args.polltime/1000)
-batlife = batLogger.end()/3600
+batlife = batLogger2.end()/3600
+logfile.close()
+battery.close()
 with open(args.outfile,'a') as f:
     f.write(f'# Battery Life (Amp-Hours): {batlife}\n')
 
