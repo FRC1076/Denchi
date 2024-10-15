@@ -1,0 +1,11 @@
+ { 
+	"fingerprint": "0xdeafe980",
+	"team": "1076",
+	"battery": "BATSIM",
+	"loadOhms": 6.1,
+	"startTime": "2024-10-15T16:30:17-0400",
+	"pollTime": 100,
+	"logVolts": 0.0,
+	"minVolts": 10.0,
+	"batteryLife": 0.10055555555555555
+ } 

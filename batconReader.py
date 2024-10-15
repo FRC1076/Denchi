@@ -75,7 +75,12 @@ def readlog(filepath : str):
         log = readStream(f)
     return log
 
-def exportLogToTar(log : batteryTest, dest, args, compress=False, verbose = False) -> None:
+def exportLogToTar(
+        log : batteryTest, 
+        dest : io.BufferedWriter, 
+        args : list[str], 
+        compress=False, 
+        verbose=False) -> None:
     '''
     args is a list of filetypes to export to. Options include:
     csv,tsv,xml,arrow,parquet,orc,json'''
@@ -122,7 +127,7 @@ def exportLogToTar(log : batteryTest, dest, args, compress=False, verbose = Fals
             print("Created ORC file")
 
     if "json" in args:
-        files['data.json'] = bytes(logframe.to_json(orient='records'),'utf-8')
+        files['data.json'] = bytes(logframe.to_json(orient='index'),'utf-8')
         if verbose:
             print("Created JSON file")
     
@@ -137,7 +142,7 @@ def exportLogToTar(log : batteryTest, dest, args, compress=False, verbose = Fals
                 print(f"Archived {filename}")
             fileStream.close()
     
-class exportTool:
+class exportCmdlineTool:
 
     def __init__(self,args):
         self.args : dict = args #args should be a dict
@@ -250,7 +255,7 @@ class exportTool:
                 print("Created ORC file")
 
         if self.args["json"]:
-            files['data.json'] = bytes(logframe.to_json(orient='records'),'utf-8')
+            files['data.json'] = bytes(logframe.to_json(orient='index'),'utf-8')
             if self.args["verbose"]:
                 print("Created JSON file")
 
@@ -273,13 +278,18 @@ if __name__ == '__main__':
     # cd exports
     # tar xf test.tar.gz
     # Test command 2: python3 batconReader.py -v P ./logs/test2.bclog
+    '''
     tests = {
         'test1' : ["P","./logs/30ad0342_SIMBAT_241015-131109.bclog"],
         'test2' : ["-v","E",'-c','--csv','--tsv','--tsv','--xml','--arrow','--parquet','--orc','--json','-o','test','./testlogs/test.bclog']
     }
-    args = exportTool.parse_args(args=tests['test1'])
-    export = exportTool(args)
-    export.process()
+    log = readlog('./testlogs/test.bclog')
+    with open("./exports/testtar.tar.gz",'wb') as tarFile:  
+        exportLogToTar(log,tarFile,['csv','json','xml','parquet'],compress=True,verbose=True)
+    '''
+    cmdArgs = exportCmdlineTool.parse_args()
+    etool = exportCmdlineTool(cmdArgs)
+    etool.process()
 
         
             

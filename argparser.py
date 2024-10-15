@@ -67,6 +67,7 @@ parser.add_argument('-p','--polltime', type=int,
 #args.log.write('%s' % (args.id, args.team, args.loadohms, args.outfile))
 #args.log.close()
 #format for comma-separated values: (Voltage,Current,Time)
+batSim = ADC.fake1MPC3008(10000,12000,1)
 args = parser.parse_args()
 if not args.id:
     raise RuntimeError("no battery ID specified")
@@ -112,7 +113,7 @@ batLogger2 = funcStreamBatLogger(header=header(
         int(args.minvolts * 1000),
         int(args.logvolts * 1000)
     ),
-    input = lambda : int.from_bytes(battery.read(4),'big',signed=False),
+    input = batSim.voltage,
     output = logfile
 )
 voltage = int(args.minvolts * 1000) + 1
