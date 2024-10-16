@@ -87,7 +87,7 @@ def exportLogToTar(
     files = {
         'header.json' : bytes(f" {{ \n\t\"fingerprint\": \"{hex(log.fingerprint)}\",\n\t\"team\": \"{log.teamID}\",\n\t\"battery\": \"{log.batteryID}\",\n\t\"loadOhms\": {str(log.loadOhms)},\n\t\"startTime\": \"{log.getISO8601Timestamp()}\",\n\t\"pollTime\": {str(log.pollTime)},\n\t\"logVolts\": {str(log.logvolts)},\n\t\"minVolts\": {log.minvolts},\n\t\"batteryLife\": {str(log.batteryLife)}\n }} ",'utf-8')
     }
-    logframe = pd.DataFrame(data=log.readings,columns=['voltage_mV','current_mA','time_ms'])
+    logframe = pd.DataFrame(data=log.readings,columns=['voltage_V','current_A','time_ms'])
     if "csv" in args:
         files['data.csv'] = bytes(logframe.to_csv(),'utf-8')
         if verbose:

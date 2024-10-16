@@ -12,7 +12,6 @@ from gpiozero import PWMLED, MCP3008
 from time import sleep
 pot = MCP3008(0)
 led = PWMLED(14)
-
 while True:
     if (pot.value < 0.001):
         led.value

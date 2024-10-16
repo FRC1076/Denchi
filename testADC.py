@@ -92,6 +92,12 @@ class fake1MPC3008():
 
         print(self.seqnum, ": Reading:", current_reading)
         return current_reading
+
+def fake2MPC3008(maxVoltage : int, minVoltage : int, step : int):
+    '''a generator function for simulating a battery being drained. all params should be given in millivolts'''
+    while maxVoltage > minVoltage:
+        yield maxVoltage
+        maxVoltage -= step
     
 
 

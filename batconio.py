@@ -219,14 +219,56 @@ def ADCIOFuncFactory(
     :param ADCReadFunc: a reference to a function that returns a direct digital reading from the ADC.
     '''
     return lambda *args,**kwargs : (int)((readFunc(*args,**kwargs)/(dMax-dMin) - dMin) * refVolts * 1000)
+
+class ADCIOFunctor():
+    '''a functor (In the C++/Python sense, not the Category Theory/Haskell sense) that modifies an ADC's read function to return its output in millivolts.
+
+    :param dMin: The minimum digital value of the ADC 
+    :param dMax: The maximum digital value of the ADC
+    :param refVolts: the MCP3xxx's reference voltage, in Volts'''
+    def __init__(self, dMin : int, dMax : int, refVolts : float) -> None:
+        self.dMin = dMin
+        self.dMax = dMax
+        self.refVolts = refVolts
+    
+    def __call__(self, func : Callable[[],int]) -> Callable[[],int]:
+
+        def inner(*args, **kwargs):
+            return (int)((func(*args,**kwargs)/(self.dMax-self.dMin) - self.dMin) * self.refVolts * 1000)
+        
+        return inner
+
+
+class MCP3xxxIOFunctor(ADCIOFunctor):
+    '''a functor (In the C++/Python sense, not the Category Theory/Haskell sense) that modifies an MCP3xxx's read function to return its output in millivolts.
+
+    :param refVolts: the MCP3xxx's reference voltage, in Volts'''
+    def __init__(self, refVolts : float = 3.3) -> None:
+        super().__init__(0,1023,refVolts)
+
+# Usage example:
+#
+# mcp = MCP3008(spi, cs)
+# mcpio = MCP3xxxIOFunctor(3.3)
+#
+# readMCP_mV = mcpio(mcp.read)
+
+
+
 if __name__ == "__main__":
-    MCP3008Function = ADCIOFuncFactory(
-        0,
-        1023,
-        12,
-        lambda x : 10 * x
-    )
-    print(MCP3008Function(100))
+    mcp3008IO = MCP3xxxIOFunctor(13.2)
+    
+    class my_class:
+        def __init__(self):
+            self.val = 100
+        
+        def getVal(self):
+            return self.val
+    
+    obj = my_class()
+    iofunc = mcp3008IO(obj.getVal)
+    
+    print(iofunc())
 
     
 
