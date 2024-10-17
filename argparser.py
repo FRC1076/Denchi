@@ -68,6 +68,7 @@ parser.add_argument('-p','--polltime', type=int,
 #args.log.close()
 #format for comma-separated values: (Voltage,Current,Time)
 if __name__ == "__main__":
+    #TODO: Encapsulate argument parser into class
     batSim = ADC.fake1MPC3008(10000,12000,1)
     batSim2 = ADC.fake2MPC3008(
         12000,

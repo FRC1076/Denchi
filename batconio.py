@@ -233,7 +233,7 @@ class MCP3008IO():
     def __init__(self, mcp : MCP.MCP3008, refVolts : float):
         self.__device = mcp
         self.__refVolts = refVolts
-        self.getPin0_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(0)) # Note: a function that returns the voltage reading of pin 0 in millivolts
+        self.getPin0_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(0))
         self.getPin1_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(1))
         self.getPin2_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(2))
         self.getPin3_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(3))
@@ -241,6 +241,15 @@ class MCP3008IO():
         self.getPin5_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(5))
         self.getPin6_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(6))
         self.getPin7_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(7))
+
+        self.getPin0_V : Callable[[],float] = lambda : self.getPin0_mV()/1000
+        self.getPin1_V : Callable[[],float] = lambda : self.getPin0_mV()/1000
+        self.getPin2_V : Callable[[],float] = lambda : self.getPin0_mV()/1000
+        self.getPin3_V : Callable[[],float] = lambda : self.getPin0_mV()/1000
+        self.getPin4_V : Callable[[],float] = lambda : self.getPin0_mV()/1000
+        self.getPin5_V : Callable[[],float] = lambda : self.getPin0_mV()/1000
+        self.getPin6_V : Callable[[],float] = lambda : self.getPin0_mV()/1000
+        self.getPin7_V : Callable[[],float] = lambda : self.getPin0_mV()/1000
 
 
 if __name__ == "__main__":
