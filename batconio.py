@@ -1,6 +1,7 @@
 # manages I/O with devices for batcon
 
 from adafruit_bus_device.spi_device import SPIDevice
+import adafruit_mcp3xxx.mcp3008 as MCP
 import busio
 import digitalio
 import struct
@@ -10,7 +11,7 @@ from abc import ABCMeta, abstractmethod
 from typing import Callable
 
 # To improve readability, any abstract classes should explicitly have their metaclass set to ABCMeta
-class SPIDeviceReaderBase(io.RawIOBase,metaclass=ABCMeta):
+class SPIDeviceStreamReaderBase(io.RawIOBase,metaclass=ABCMeta):
     def __init__(self,spi : busio.SPI, cs : digitalio.DigitalInOut):
         self._device = SPIDevice(spi,cs)
     
@@ -75,7 +76,7 @@ class SPIDeviceReaderBase(io.RawIOBase,metaclass=ABCMeta):
         raise IOError("SPIDeviceReader does not support readlines")
     
 # Base IO class for all ADC readers
-class adcReaderBase(SPIDeviceReaderBase,metaclass=ABCMeta):
+class adcStreamReaderBase(SPIDeviceStreamReaderBase,metaclass=ABCMeta):
 
     def __init__(self,spi : busio.SPI, cs : digitalio.DigitalInOut,refVolts : float):
         """
@@ -99,7 +100,7 @@ class adcReaderBase(SPIDeviceReaderBase,metaclass=ABCMeta):
         raise NotImplementedError
 
 # Base class for all MCP3xxx readers
-class mcp3xxxReaderBase(adcReaderBase,metaclass=ABCMeta):
+class mcp3xxxStreamReaderBase(adcStreamReaderBase,metaclass=ABCMeta):
     #TODO: add default refvoltage
     def __init__(self, 
                  spi : busio.SPI, 
@@ -172,7 +173,7 @@ class mcp3xxxReaderBase(adcReaderBase,metaclass=ABCMeta):
             return struct.pack(">H",self.getAnalog_mV(self.__read(self._pin,self._readDiff))).rjust(size,'\00')
         return self.readall()
 
-class mcp3008Reader(mcp3xxxReaderBase):
+class mcp3008StreamReader(mcp3xxxStreamReaderBase):
     def __init__(
             self, 
             spi : busio.SPI, 
@@ -206,57 +207,43 @@ class mcp3008Reader(mcp3xxxReaderBase):
         super().__init__(spi,cs,refVolts,pin,readDiff)
         self._out_buf[0] = 0x01
 
-def ADCIOFuncFactory(
-        dMin : int,
-        dMax : int,
-        refVolts : float,
-        readFunc : Callable):
-    '''a function factory that generates a function which translates an ADC's digital output into an analog signal in millivolts
-    
-    :param dMin: The minimum digital value of the ADC 
-    :param dMax: The maximum digital value of the ADC
-    :param refVolts: The maximum voltage reading of the ADC (adjusted for any signal attenuation)
-    :param ADCReadFunc: a reference to a function that returns a direct digital reading from the ADC.
-    '''
-    return lambda *args,**kwargs : (int)((readFunc(*args,**kwargs)/(dMax-dMin) - dMin) * refVolts * 1000)
-
 class ADCIOFunctor():
-    '''a functor (In the C++/Python sense, not the Category Theory/Haskell sense) that modifies an ADC's read function to return its output in millivolts.
+    '''
+    a functor that returns the output of an ADC pin in millivolts
 
     :param dMin: The minimum digital value of the ADC 
     :param dMax: The maximum digital value of the ADC
-    :param refVolts: the MCP3xxx's reference voltage, in Volts'''
-    def __init__(self, dMin : int, dMax : int, refVolts : float) -> None:
-        self.dMin = dMin
-        self.dMax = dMax
-        self.refVolts = refVolts
+    :param refVolts: the MCP3xxx's reference voltage, in Volts
+    :param readFunc: a function that returns the ADC's raw digital output (readFunc MUST TAKE NO PARAMETERS, If your ADC's read method requires a parameter, then it is recommended to wrap it in a lambda function)
+    '''
+    def __init__(self, dMin : int, dMax : int, refVolts : float, readFunc : Callable[[],int]):
+        self.__dMin = dMin
+        self.__dMax = dMax
+        self.__refVolts = refVolts
+        self.__readFunc = readFunc
     
-    def __call__(self, func : Callable[[],int]) -> Callable[[],int]:
-
-        def inner(*args, **kwargs):
-            return (int)((func(*args,**kwargs)/(self.dMax-self.dMin) - self.dMin) * self.refVolts * 1000)
-        
-        return inner
+    def __call__(self) -> int:
+        return (int)((self.__readFunc()/(self.__dMax-self.__dMin) - self.__dMin) * self.__refVolts * 1000)
+    
 
 
-class MCP3xxxIOFunctor(ADCIOFunctor):
-    '''a functor (In the C++/Python sense, not the Category Theory/Haskell sense) that modifies an MCP3xxx's read function to return its output in millivolts.
 
-    :param refVolts: the MCP3xxx's reference voltage, in Volts'''
-    def __init__(self, refVolts : float = 3.3) -> None:
-        super().__init__(0,1023,refVolts)
-
-# Usage example:
-#
-# mcp = MCP3008(spi, cs)
-# mcpio = MCP3xxxIOFunctor(3.3)
-#
-# readMCP_mV = mcpio(mcp.read)
-
+class MCP3008IO():
+    '''IO layer for an MCP3008 Device'''
+    def __init__(self, mcp : MCP.MCP3008, refVolts : float):
+        self.__device = mcp
+        self.__refVolts = refVolts
+        self.getPin0_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(0)) # Note: a function that returns the voltage reading of pin 0 in millivolts
+        self.getPin1_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(1))
+        self.getPin2_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(2))
+        self.getPin3_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(3))
+        self.getPin4_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(4))
+        self.getPin5_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(5))
+        self.getPin6_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(6))
+        self.getPin7_mV : Callable[[],int] = ADCIOFunctor(0,1023,self.__refVolts,lambda : self.__device.read(7))
 
 
 if __name__ == "__main__":
-    mcp3008IO = MCP3xxxIOFunctor(13.2)
     
     class my_class:
         def __init__(self):
@@ -266,9 +253,12 @@ if __name__ == "__main__":
             return self.val
     
     obj = my_class()
-    iofunc = mcp3008IO(obj.getVal)
     
-    print(iofunc())
+    #iofunc = mcp3008IO(obj.getVal)
+    iofunc = ADCIOFunctor(0,1023,13.2,obj.getVal)
+    
+    print(iofunc()) #Should print 1290
+    print(iofunc) #Should print <__main__.ADCIOFunctor object at [memory address]>
 
     
 
