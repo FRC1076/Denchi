@@ -19,6 +19,6 @@
         'numpy',
         'lxml']
 [electrical]
-    voltDivider = 4 #Analog voltage inputs are divided by this constant before being read by the ADC
+    voltScalar = 0.2 #Analog voltage inputs are scaled by this constant before being read by the ADC
     refVoltageRaw = 3.3 #ADC reference voltage, not compensated for the volt divider
 

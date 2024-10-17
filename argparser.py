@@ -67,74 +67,75 @@ parser.add_argument('-p','--polltime', type=int,
 #args.log.write('%s' % (args.id, args.team, args.loadohms, args.outfile))
 #args.log.close()
 #format for comma-separated values: (Voltage,Current,Time)
-batSim = ADC.fake1MPC3008(10000,12000,1)
-batSim2 = ADC.fake2MPC3008(
-    12000,
-    10000,
-    10
-)
-args = parser.parse_args()
-if not args.id:
-    raise RuntimeError("no battery ID specified")
-elif not args.loadohms:
-    raise RuntimeError("no resistance load specified")
-elif len(args.id) > 10:
-    raise RuntimeError("Battery ID cannot be longer than 10 characters")
-initialTimestamp = time.localtime(time.time())
-timestampstr = time.strftime(f"%a %b %d %H:%M:%S%z %Y",initialTimestamp)
-hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltime)+timestampstr
-hashSeedBytes = bytearray()
-hashSeedBytes.extend(map(ord, hashSeedString))
-hasher = hashlib.shake_256(hashSeedBytes)
-binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}_{args.id}_{time.strftime(f'%y%m%d-%H%M%S',initialTimestamp)}.bclog"
-#binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}-{args.id}.bclog"
-print(f"------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hasher.hexdigest(4)}\n# Team Number: {args.team}\n# Battery ID: {args.id}\n# Load (Ohms): {str(args.loadohms)}\n# Start Time: {timestampstr}\n# Poll Interval: {str(args.polltime)}\n# Delta-V Logging Threshold: {str(args.logvolts)}\n# Minimum Volts: {args.minvolts}\n# Logged at: {binfileName}")
-with open(args.outfile, 'a') as outfile:
-    outfile.write(f"------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hasher.hexdigest(4)}\n# Team Number: {args.team}\n# Battery ID: {args.id}\n# Load (Ohms): {str(args.loadohms)}\n# Start Time: {timestampstr}\n# Poll Interval: {str(args.polltime)}\n# Delta-V Logging Threshold: {str(args.logvolts)}\n# Minimum Volts: {args.minvolts}\n# Logged at: {binfileName}\n")
-if not os.path.exists(f"./{config['system']['logdir']}"):
-    os.mkdir(f"./{config['system']['logdir']}")
-logfile = open(binfileName,'wb')
-battery = io.BytesIO(int.to_bytes(12000,4,'big')+int.to_bytes(11500,4,'big')+int.to_bytes(11000,4,'big')+int.to_bytes(10500,4,'big')+int.to_bytes(10000,4,'big'))
-batLogger = streamBatLogger(header=header(
-        int.from_bytes(hasher.digest(4),'big'),
-        args.team,
-        args.id,
-        args.loadohms,
-        args.polltime,
-        initialTimestamp,
-        int(args.minvolts * 1000),
-        int(args.logvolts * 1000)
-    ),
-    input=battery,
-    output=logfile
-)
-batLogger2 = funcStreamBatLogger(header=header(
-        int.from_bytes(hasher.digest(4),'big'),
-        args.team,
-        args.id,
-        args.loadohms,
-        args.polltime,
-        initialTimestamp,
-        int(args.minvolts * 1000),
-        int(args.logvolts * 1000)
-    ),
-    input = lambda : next(batSim2),
-    output = logfile
-)
-voltage = int(args.minvolts * 1000) + 1
-batLogger2.start()
-while voltage > (args.minvolts * 1000):
-    try:
-        voltage = batLogger2.recordReading()
-        time.sleep(args.polltime/1000)
-    except StopIteration:
-        break
+if __name__ == "__main__":
+    batSim = ADC.fake1MPC3008(10000,12000,1)
+    batSim2 = ADC.fake2MPC3008(
+        12000,
+        10000,
+        10
+    )
+    args = parser.parse_args()
+    if not args.id:
+        raise RuntimeError("no battery ID specified")
+    elif not args.loadohms:
+        raise RuntimeError("no resistance load specified")
+    elif len(args.id) > 10:
+        raise RuntimeError("Battery ID cannot be longer than 10 characters")
+    initialTimestamp = time.localtime(time.time())
+    timestampstr = time.strftime(f"%a %b %d %H:%M:%S%z %Y",initialTimestamp)
+    hashSeedString = str(args.team)+str(args.id)+str(args.loadohms)+str(args.polltime)+timestampstr
+    hashSeedBytes = bytearray()
+    hashSeedBytes.extend(map(ord, hashSeedString))
+    hasher = hashlib.shake_256(hashSeedBytes)
+    binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}_{args.id}_{time.strftime(f'%y%m%d-%H%M%S',initialTimestamp)}.bclog"
+    #binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}-{args.id}.bclog"
+    print(f"------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hasher.hexdigest(4)}\n# Team Number: {args.team}\n# Battery ID: {args.id}\n# Load (Ohms): {str(args.loadohms)}\n# Start Time: {timestampstr}\n# Poll Interval: {str(args.polltime)}\n# Delta-V Logging Threshold: {str(args.logvolts)}\n# Minimum Volts: {args.minvolts}\n# Logged at: {binfileName}")
+    with open(args.outfile, 'a') as outfile:
+        outfile.write(f"------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hasher.hexdigest(4)}\n# Team Number: {args.team}\n# Battery ID: {args.id}\n# Load (Ohms): {str(args.loadohms)}\n# Start Time: {timestampstr}\n# Poll Interval: {str(args.polltime)}\n# Delta-V Logging Threshold: {str(args.logvolts)}\n# Minimum Volts: {args.minvolts}\n# Logged at: {binfileName}\n")
+    if not os.path.exists(f"./{config['system']['logdir']}"):
+        os.mkdir(f"./{config['system']['logdir']}")
+    logfile = open(binfileName,'wb')
+    battery = io.BytesIO(int.to_bytes(12000,4,'big')+int.to_bytes(11500,4,'big')+int.to_bytes(11000,4,'big')+int.to_bytes(10500,4,'big')+int.to_bytes(10000,4,'big'))
+    batLogger = streamBatLogger(header=header(
+            int.from_bytes(hasher.digest(4),'big'),
+            args.team,
+            args.id,
+            args.loadohms,
+            args.polltime,
+            initialTimestamp,
+            int(args.minvolts * 1000),
+            int(args.logvolts * 1000)
+        ),
+        input=battery,
+        output=logfile
+    )
+    batLogger2 = funcStreamBatLogger(header=header(
+            int.from_bytes(hasher.digest(4),'big'),
+            args.team,
+            args.id,
+            args.loadohms,
+            args.polltime,
+            initialTimestamp,
+            int(args.minvolts * 1000),
+            int(args.logvolts * 1000)
+        ),
+        input = lambda : next(batSim2),
+        output = logfile
+    )  
+    voltage = int(args.minvolts * 1000) + 1
+    batLogger2.start()
+    while voltage > (args.minvolts * 1000):
+        try:
+            voltage = batLogger2.recordReading()
+            time.sleep(args.polltime/1000)
+        except StopIteration:
+            break
 
-batlife = batLogger2.end()/3600
-logfile.close()
-battery.close()
-with open(args.outfile,'a') as f:
-    f.write(f'# Battery Life (Amp-Hours): {batlife}\n')
+    batlife = batLogger2.end()/3600
+    logfile.close()
+    battery.close()
+    with open(args.outfile,'a') as f:
+        f.write(f'# Battery Life (Amp-Hours): {batlife}\n')
 
 
 
