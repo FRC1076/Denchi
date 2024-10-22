@@ -156,7 +156,7 @@ class funcStreamBatLogger(batLoggerBase):
 
     def recordReading(self) -> int:
         '''
-        automatically records a reading from the input stream and records it to the output stream if the voltage difference is high enough. Also returns a copy of the voltage reading
+        automatically records a reading from the input function and records it to the output stream if the voltage difference is high enough. Also returns a copy of the reading
         '''
         voltage_mV = self.infunc()
         current_mA = int(voltage_mV/self.header.loadOhms)
@@ -167,7 +167,7 @@ class funcStreamBatLogger(batLoggerBase):
             self.outstream.write(bytes(intToBytes(time_ms,size=32)))
             self.logs.append((voltage_mV,current_mA,time_ms))
             self.previousVoltage = voltage_mV
-        return voltage_mV
+        return (voltage_mV,current_mA,time_ms)
 
 
 

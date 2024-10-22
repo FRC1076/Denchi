@@ -127,7 +127,7 @@ if __name__ == "__main__":
     batLogger2.start()
     while voltage > (args.minvolts * 1000):
         try:
-            voltage = batLogger2.recordReading()
+            voltage = batLogger2.recordReading()[0]
             time.sleep(args.polltime/1000)
         except StopIteration:
             break
