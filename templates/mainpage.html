@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Battery Conditioner</title>
+    </head>
+    <body>
+        <h1>
+            FRC 1076 Battery Conditioner
+        </h1>
+        <form>
+            <label for="batID">Battery ID:</label><br>
+            <input type="text" id="batID" required><br><br>
+
+            <label for="loadohms">Load resistance (Ohms):</label><br>
+            <input type="text" id="loadohms" required><br><br>
+
+            <label for="minvolts">Minimum voltage:</label><br>
+            <input type="text" id="minvolts" required><br><br>
+
+            <label for="logvolts">Logging voltage:</label><br>
+            <input type="text" id="logvolts" required><br><br>
+
+            <label for="team">Team number:</label><br>
+            <input type="text" id="team" required><br><br>
+
+            <label for="polltime">Polling interval (milliseconds):</label><br>
+            <input type="text" id="polltime" required><br><br> 
+            
+            <button id="logbutton">Begin Logging</button>
+        </form>
+
+        <div id="output">Voltage (Volts): N/A<br>Current (Amps): N/A<br>Time (ms): N/A<br></div>
+
+        <script>
+            document.getElementById("logbutton").addEventListener("click",(event) => {
+                event.preventDefault();
+                beginLogging();
+            });
+
+            function beginLogging() {
+                const id = document.getElementById("batID").value;
+                const loadohms = +document.getElementById("loadohms").value; 
+                const minvolts = +document.getElementById("minvolts").value;
+                const logvolts = +document.getElementById("logvolts").value;
+                const team = document.getElementById("team").value;
+                const polltime = +document.getElementById("polltime").value;
+                console.log(id);
+                console.log(loadohms);
+                console.log(minvolts);
+                console.log(logvolts);
+                console.log(team);
+                console.log(polltime);
+
+                fetch("/process", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type" : "application/json",
+                        "Clacks" : "GNU Terry Pratchett"
+                    },
+                    body: JSON.stringify({ id: id, loadohms: loadohms, minvolts: minvolts, logvolts: logvolts, team: team, polltime: polltime})
+                })
+                .then(response => {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder("utf-8");
+
+                    function readChunk() {
+                        reader.read().then(({ done, value }) => {
+                            if (done) {
+                                console.log("Logging complete");
+                                return;
+                            }
+                            //TODO: Account for end output
+                            const chunk = decoder.decode(value);
+                            try {
+                                const jsonObject = JSON.parse(chunk);
+                                document.getElementById("output").innerText = `Voltage (Volts): ${jsonObject.voltage_V}\nCurrent (Amps):${jsonObject.current_A}\nTime (ms):${jsonObject.time_ms}`;
+                            } catch (error) {
+                                console.error("Error parsing JSON chunk:",error);
+                            }
+                            readChunk();
+                        });
+                    }
+                    readChunk();
+                });
+            }
+        </script>
+    </body>
+</html>

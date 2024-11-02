@@ -10,6 +10,8 @@ import busio
 import digitalio
 import board
 import adafruit_mcp3xxx.mcp3008 as MCP
+from io import BytesIO, BufferedWriter
+from testADC import fake1MPC3008
 
 def intToBytes(num,size=32):
     #Converts ints into bytes
@@ -42,6 +44,132 @@ parser.add_argument('-o','--outfile', type=str,
 parser.add_argument('-p','--polltime', type=int,
                     help='Polling interval in milliseconds', default=config['system']['polltime'])
 
+
+class batconFactory():
+    '''takes arguments, and generates an MCPIO object, and a batlogger object'''
+    def __init__(self,
+    id : str,
+    loadohms : float,
+    minvolts : float,
+    logvolts :float,
+    team :str,
+    polltime : int,
+    outfile = "history.dat"
+    ) -> None:
+        self.spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
+        self.cs = digitalio.DigitalInOut(board.D5)
+        self.mcp = MCP.MCP3008(spi,cs)
+        self.mcpIO = MCP3008IO(mcp,config['electrical']['refVoltageRaw'] / config['electrical']['voltScalar'])
+        if not id:
+            raise RuntimeError("no battery ID specified")
+        elif not loadohms:
+            raise RuntimeError("no resistance load specified")
+        elif len(id) > 10:
+            raise RuntimeError("Battery ID cannot be longer than 10 characters")
+        initialTimestamp = time.localtime(time.time())
+        timestampstr = time.strftime(f"%a %b %d %H:%M:%S%z %Y",initialTimestamp)
+        hashSeedString = str(team)+str(id)+str(loadohms)+str(polltime)+timestampstr
+        hashSeedBytes = bytearray()
+        hashSeedBytes.extend(map(ord, hashSeedString))
+        hasher = hashlib.shake_256(hashSeedBytes)
+
+        self.binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}_{id}_{time.strftime(f'%y%m%d-%H%M%S',initialTimestamp)}.bclog"
+
+        self.outfilepath = outfile
+        self.headerstring = f"------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hasher.hexdigest(4)}\n# Team Number: {team}\n# Battery ID: {id}\n# Load (Ohms): {str(loadohms)}\n# Start Time: {timestampstr}\n# Poll Interval: {str(polltime)}\n# Delta-V Logging Threshold: {str(logvolts)}\n# Minimum Volts: {minvolts}\n# Logged at: {self.binfileName}\n"
+
+        self.header = header(
+            int.from_bytes(hasher.digest(4),'big'),
+            team,
+            id,
+            loadohms,
+            polltime,
+            initialTimestamp,
+            int(minvolts * 1000),
+            int(logvolts * 1000)
+        )
+    
+    def writeHeader(self) -> None:
+        with open(self.outfilepath,'a') as f:
+            f.write(self.headerstring)
+    
+    
+    def getBatteryIO(self) -> MCP3008IO:
+        '''returns the battery IO object'''
+        return self.mcpIO
+
+    def getOutputFile(self):
+        '''returns a bytestream representing the default output file'''
+        return open(self.binfileName,'wb')
+
+    def getFSBatlogger(self, outputstream : BytesIO) -> funcStreamBatLogger:
+        '''takes a BytesIO object as an output stream, returns a funcStreamBatLogger configured to log this battery'''
+        batLogger = funcStreamBatLogger(
+            header=self.header,
+            input = self.mcpIO.getPin0_mV,
+            output = outputstream
+        )
+        return batLogger
+        
+class fakeBatconFactory():
+    def __init__(self,
+    id : str,
+    loadohms : float,
+    minvolts : float,
+    logvolts :float,
+    team :str,
+    polltime : int,
+    outfile="history.dat"
+    ) -> None:
+        self.batsim = fake1MPC3008(10000,12000,5)
+        if not id:
+            raise RuntimeError("no battery ID specified")
+        elif not loadohms:
+            raise RuntimeError("no resistance load specified")
+        elif len(id) > 10:
+            raise RuntimeError("Battery ID cannot be longer than 10 characters")
+        initialTimestamp = time.localtime(time.time())
+        timestampstr = time.strftime(f"%a %b %d %H:%M:%S%z %Y",initialTimestamp)
+        hashSeedString = str(team)+str(id)+str(loadohms)+str(polltime)+timestampstr
+        hashSeedBytes = bytearray()
+        hashSeedBytes.extend(map(ord, hashSeedString))
+        hasher = hashlib.shake_256(hashSeedBytes)
+        self.binfileName = f"./{config['system']['logdir']}/{hasher.hexdigest(4)}_{id}_{time.strftime(f'%y%m%d-%H%M%S',initialTimestamp)}.bclog"
+        
+        self.outfilepath = outfile
+        self.headerstring = f"------------------------------------------------\n# Battery Conditioner and Capacity Test\n# Fingerprint: {hasher.hexdigest(4)}\n# Team Number: {team}\n# Battery ID: {id}\n# Load (Ohms): {str(loadohms)}\n# Start Time: {timestampstr}\n# Poll Interval: {str(polltime)}\n# Delta-V Logging Threshold: {str(logvolts)}\n# Minimum Volts: {minvolts}\n# Logged at: {self.binfileName}\n"
+
+        self.header = header(
+            int.from_bytes(hasher.digest(4),'big'),
+            team,
+            id,
+            loadohms,
+            polltime,
+            initialTimestamp,
+            int(minvolts * 1000),
+            int(logvolts * 1000)
+        )
+
+    def writeHeader(self) -> None:
+        with open(self.outfilepath,'a') as f:
+            f.write(self.headerstring)
+    
+    def getFakeBatteryIO(self) -> fake1MPC3008:
+        '''returns the battery IO object'''
+        return self.batsim
+
+    def getOutputFile(self) -> BufferedWriter:
+        '''returns a bytestream representing the default output file'''
+        return open(self.binfileName,'wb')
+
+    def getFSBatlogger(self, outputstream : BytesIO) -> funcStreamBatLogger:
+        '''takes a BytesIO object as an output stream, returns a funcStreamBatLogger configured to log this battery'''
+        batLogger = funcStreamBatLogger(
+            header=self.header,
+            input = self.batsim.voltage,
+            output = outputstream
+        )
+        return batLogger
 
 if __name__ == "__main__":
 
