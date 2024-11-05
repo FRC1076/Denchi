@@ -17,6 +17,7 @@ def readingGenerator(id,loadohms,minvolts,logvolts,team,polltime):
     batlogger.start()
     while (voltage_mV > batlogger.header.minvolts):
         reading = batlogger.recordReading() #(voltage_mV,current_mA,time_ms)
+        voltage_mV = reading[0]
         voltage_V = reading[0]/1000
         current_A = reading[1]/1000
         time_ms = reading[2]
@@ -29,7 +30,6 @@ def readingGenerator(id,loadohms,minvolts,logvolts,team,polltime):
     print(f"# Battery Life (Amp-Hours): {batlife}")
     with open(batconfac.outfilepath,'a') as f:
         f.write(f'# Battery Life (Amp-Hours): {batlife}\n')
-    return batlife
 
 @app.route('/')
 def mainpage():

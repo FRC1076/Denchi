@@ -80,7 +80,7 @@ class fake1MPC3008():
             print(self.seqnum, ": Bottomed out at:", current_reading)
             current_reading = self.vmin
             self.reading = self.vmin
-            self.charge_direction=1   # switch to  charging
+            self.charge_direction=0   # stop discharge
 
         # use the step and direction to compute next reading
         self.reading+=(self.charge_direction * self.step)
